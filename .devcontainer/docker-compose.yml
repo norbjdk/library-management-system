@@ -1,0 +1,11 @@
+name: projektzespolowy-devcontainer
+
+services:
+  backend:
+    volumes:
+      - .:/workspace:cached
+      - vscode_server:/root/.vscode-server
+    working_dir: /workspace/backend
+
+volumes:
+  vscode_server:

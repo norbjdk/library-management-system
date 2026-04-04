@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    "ms-azuretools.vscode-containers",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "humao.rest-client",
+    "davidanson.vscode-markdownlint",
+    "redhat.vscode-yaml",
+    "angular.ng-template",
+    "ms-azuretools.vscode-docker",
+    "esbenp.prettier-vscode",
+    "SeyyedKhandon.firacode",
+    "christian-kohler.npm-intellisense",
+    "mechatroner.rainbow-csv"
+  ]
+}
