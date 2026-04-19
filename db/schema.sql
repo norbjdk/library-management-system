@@ -75,3 +75,13 @@ CREATE TABLE loans (
     returnDate DATE,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'returned', 'overdue'))
 );
+
+CREATE TABLE reservations (
+    id SERIAL PRIMARY KEY,
+    book_id INT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    user_id INT  NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reservationDate DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiryDate DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'fulfilled', 'cancelled', 'expired')),
+	UNIQUE (book_id, status)
+);
