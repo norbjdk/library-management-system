@@ -65,3 +65,13 @@ CREATE TABLE copies (
     condition VARCHAR(20) NOT NULL DEFAULT 'good' CHECK (condition IN ('new', 'good', 'worn', 'damaged')),
     available BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+CREATE TABLE loans (
+    id SERIAL PRIMARY KEY,
+    copy_id INT NOT NULL REFERENCES copies(id) ON DELETE RESTRICT,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    loanDate DATE NOT NULL DEFAULT CURRENT_DATE,
+    dueDate DATE NOT NULL,
+    returnDate DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'returned', 'overdue'))
+);
