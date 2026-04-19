@@ -57,3 +57,11 @@ CREATE TABLE book_categories (
     category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
     PRIMARY KEY (book_id, category_id)
 );
+
+CREATE TABLE copies (
+    id SERIAL PRIMARY KEY,
+    book_id INT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    location_id INT REFERENCES locations(id) ON DELETE SET NULL,
+    condition VARCHAR(20) NOT NULL DEFAULT 'good' CHECK (condition IN ('new', 'good', 'worn', 'damaged')),
+    available BOOLEAN NOT NULL DEFAULT TRUE
+);
