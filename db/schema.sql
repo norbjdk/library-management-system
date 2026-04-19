@@ -5,4 +5,5 @@ CREATE TABLE users (
 	email VARCHAR(100) UNIQUE NOT NULL,
 	birthdate DATE NOT NULL,
 	createDate TIMESTAMP DEFAULT NOW()
+    password VARCHAR(255) NOT NULL
 );
