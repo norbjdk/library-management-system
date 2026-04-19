@@ -29,3 +29,10 @@ CREATE TABLE categories (
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT
 );
+
+CREATE TABLE locations (
+    id SERIAL PRIMARY KEY,
+    shelf VARCHAR(20) NOT NULL,
+    section VARCHAR(50),
+    floor SMALLINT
+);
