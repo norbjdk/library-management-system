@@ -8,3 +8,11 @@ CREATE TABLE users (
     role VARCHAR(20) NOT NULL DEFAULT 'reader' CHECK (role IN ('reader', 'librarian', 'admin')),
     createDate TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE authors (
+    id SERIAL PRIMARY KEY,
+    firstName VARCHAR(50) NOT NULL,
+    lastName VARCHAR(50) NOT NULL,
+    birthdate DATE,
+    nationality VARCHAR(50)
+);
