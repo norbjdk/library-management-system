@@ -36,3 +36,12 @@ CREATE TABLE locations (
     section VARCHAR(50),
     floor SMALLINT
 );
+
+CREATE TABLE books (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    ean VARCHAR(20) UNIQUE,
+    publishYear SMALLINT,
+    description TEXT,
+    publisher_id INT REFERENCES publishers(id) ON DELETE SET NULL
+);
