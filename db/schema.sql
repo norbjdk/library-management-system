@@ -16,3 +16,10 @@ CREATE TABLE authors (
     birthdate DATE,
     nationality VARCHAR(50)
 );
+
+CREATE TABLE publishers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    city VARCHAR(50),
+    country VARCHAR(50)
+);
