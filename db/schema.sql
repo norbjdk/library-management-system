@@ -79,9 +79,19 @@ CREATE TABLE loans (
 CREATE TABLE reservations (
     id SERIAL PRIMARY KEY,
     book_id INT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    user_id INT  NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reservationDate DATE NOT NULL DEFAULT CURRENT_DATE,
     expiryDate DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'fulfilled', 'cancelled', 'expired')),
 	UNIQUE (book_id, status)
+);
+
+CREATE TABLE fines (
+    id SERIAL PRIMARY KEY,
+    loan_id INT NOT NULL REFERENCES loans(id) ON DELETE RESTRICT,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    amount NUMERIC(8, 2) NOT NULL,
+    issueDate DATE NOT NULL DEFAULT CURRENT_DATE,
+    paidDate DATE,
+    paid BOOLEAN NOT NULL DEFAULT FALSE
 );
