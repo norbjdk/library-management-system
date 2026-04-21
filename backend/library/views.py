@@ -1,0 +1,687 @@
+from __future__ import annotations
+
+from decimal import Decimal
+
+from django.db.models import Q, Sum
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
+from library.models import (
+    Author,
+    Book,
+    Category,
+    Copy,
+    Fine,
+    LibraryUser,
+    Loan,
+    LoanStatus,
+    Location,
+    Notification,
+    NotificationType,
+    Order,
+    OrderStatus,
+    Publisher,
+    Reservation,
+    ReservationStatus,
+)
+from library.permissions import IsStaffMember, IsStaffWriteOrReadOnly
+from library.serializers import (
+    AuthorSerializer,
+    BookSerializer,
+    CategorySerializer,
+    CopySerializer,
+    FineSerializer,
+    LoanSerializer,
+    LocationSerializer,
+    NotificationSerializer,
+    OrderSerializer,
+    PublisherSerializer,
+    ReaderProfileSerializer,
+    ReaderSerializer,
+    ReservationSerializer,
+)
+from library.services import (
+    build_book_availability_snapshot,
+    calculate_overdue_amount,
+    create_notification,
+    update_loan_status,
+)
+from rest_framework import filters, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+
+class ApiRootView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(
+            {
+                "health": request.build_absolute_uri(reverse("health")),
+                "schema": request.build_absolute_uri(reverse("schema")),
+                "docs": request.build_absolute_uri(reverse("swagger-ui")),
+                "auth": {
+                    "login": request.build_absolute_uri(reverse("auth-login")),
+                    "refresh": request.build_absolute_uri(reverse("auth-refresh")),
+                    "me": request.build_absolute_uri(reverse("auth-me")),
+                    "profile": request.build_absolute_uri(reverse("profile")),
+                },
+                "catalog": {
+                    "books": request.build_absolute_uri(reverse("book-list")),
+                    "authors": request.build_absolute_uri(reverse("author-list")),
+                    "publishers": request.build_absolute_uri(reverse("publisher-list")),
+                    "categories": request.build_absolute_uri(reverse("category-list")),
+                    "locations": request.build_absolute_uri(reverse("location-list")),
+                    "copies": request.build_absolute_uri(reverse("copy-list")),
+                },
+                "circulation": {
+                    "readers": request.build_absolute_uri(reverse("reader-list")),
+                    "loans": request.build_absolute_uri(reverse("loan-list")),
+                    "reservations": request.build_absolute_uri(
+                        reverse("reservation-list")
+                    ),
+                    "fines": request.build_absolute_uri(reverse("fine-list")),
+                    "orders": request.build_absolute_uri(reverse("order-list")),
+                    "notifications": request.build_absolute_uri(
+                        reverse("notification-list")
+                    ),
+                },
+            }
+        )
+
+
+class BaseCatalogViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsStaffWriteOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+
+    def get_queryset(self):
+        return super().get_queryset()
+
+
+class BookViewSet(BaseCatalogViewSet):
+    queryset = (
+        Book.objects.select_related("publisher")
+        .prefetch_related("authors", "categories", "copies__location")
+        .all()
+    )
+    serializer_class = BookSerializer
+    search_fields = [
+        "title",
+        "ean",
+        "description",
+        "publisher__name",
+        "authors__first_name",
+        "authors__last_name",
+        "categories__name",
+    ]
+    ordering_fields = ["title", "publish_year", "ean", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.query_params.get("q")
+        publisher_id = self.request.query_params.get("publisher")
+        author_id = self.request.query_params.get("author")
+        category_id = self.request.query_params.get("category")
+        available = self.request.query_params.get("available")
+
+        if query:
+            queryset = queryset.filter(
+                Q(title__icontains=query)
+                | Q(ean__icontains=query)
+                | Q(description__icontains=query)
+                | Q(publisher__name__icontains=query)
+                | Q(authors__first_name__icontains=query)
+                | Q(authors__last_name__icontains=query)
+                | Q(categories__name__icontains=query)
+            )
+        if publisher_id:
+            queryset = queryset.filter(publisher_id=publisher_id)
+        if author_id:
+            queryset = queryset.filter(authors__id=author_id)
+        if category_id:
+            queryset = queryset.filter(categories__id=category_id)
+        if available in {"true", "1", "yes"}:
+            queryset = queryset.filter(copies__available=True)
+        elif available in {"false", "0", "no"}:
+            queryset = queryset.filter(copies__available=False)
+
+        return queryset.distinct()
+
+    @action(detail=True, methods=["get"])
+    def availability(self, request, pk=None):
+        book = self.get_object()
+        return Response(build_book_availability_snapshot(book))
+
+
+class AuthorViewSet(BaseCatalogViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+    search_fields = ["first_name", "last_name", "nationality"]
+    ordering_fields = ["first_name", "last_name", "birthdate", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.query_params.get("q")
+        if query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(nationality__icontains=query)
+            )
+        return queryset
+
+
+class PublisherViewSet(BaseCatalogViewSet):
+    queryset = Publisher.objects.all()
+    serializer_class = PublisherSerializer
+    search_fields = ["name", "city", "country"]
+    ordering_fields = ["name", "city", "country", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.query_params.get("q")
+        if query:
+            queryset = queryset.filter(
+                Q(name__icontains=query)
+                | Q(city__icontains=query)
+                | Q(country__icontains=query)
+            )
+        return queryset
+
+
+class CategoryViewSet(BaseCatalogViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    search_fields = ["name", "description"]
+    ordering_fields = ["name", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.query_params.get("q")
+        if query:
+            queryset = queryset.filter(
+                Q(name__icontains=query) | Q(description__icontains=query)
+            )
+        return queryset
+
+
+class LocationViewSet(BaseCatalogViewSet):
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+    search_fields = ["shelf", "section"]
+    ordering_fields = ["floor", "section", "shelf", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        shelf = self.request.query_params.get("shelf")
+        section = self.request.query_params.get("section")
+        floor = self.request.query_params.get("floor")
+        if shelf:
+            queryset = queryset.filter(shelf__icontains=shelf)
+        if section:
+            queryset = queryset.filter(section__icontains=section)
+        if floor not in {None, ""}:
+            queryset = queryset.filter(floor=floor)
+        return queryset
+
+
+class CopyViewSet(BaseCatalogViewSet):
+    queryset = Copy.objects.select_related("book", "location").all()
+    serializer_class = CopySerializer
+    search_fields = ["book__title", "book__ean", "location__shelf", "location__section"]
+    ordering_fields = ["id", "condition", "available"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        book_id = self.request.query_params.get("book")
+        location_id = self.request.query_params.get("location")
+        available = self.request.query_params.get("available")
+        condition = self.request.query_params.get("condition")
+
+        if book_id:
+            queryset = queryset.filter(book_id=book_id)
+        if location_id:
+            queryset = queryset.filter(location_id=location_id)
+        if available in {"true", "1", "yes"}:
+            queryset = queryset.filter(available=True)
+        elif available in {"false", "0", "no"}:
+            queryset = queryset.filter(available=False)
+        if condition:
+            queryset = queryset.filter(condition=condition)
+        return queryset
+
+
+class ReaderViewSet(viewsets.ModelViewSet):
+    queryset = LibraryUser.objects.all()
+    serializer_class = ReaderSerializer
+    permission_classes = [IsStaffMember]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["first_name", "last_name", "email", "role"]
+    ordering_fields = ["first_name", "last_name", "email", "role", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.query_params.get("q")
+        role = self.request.query_params.get("role")
+        if query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+            )
+        if role:
+            queryset = queryset.filter(role=role)
+        return queryset
+
+
+class LoanViewSet(viewsets.ModelViewSet):
+    queryset = Loan.objects.select_related("copy__book", "copy__location", "user").all()
+    serializer_class = LoanSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["copy__book__title", "user__first_name", "user__last_name"]
+    ordering_fields = ["loan_date", "due_date", "return_date", "status", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            return queryset.none()
+        if not getattr(user, "is_staff", False):
+            queryset = queryset.filter(user_id=user.id)
+
+        status_filter = self.request.query_params.get("status")
+        book_id = self.request.query_params.get("book")
+        overdue = self.request.query_params.get("overdue")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if book_id:
+            queryset = queryset.filter(copy__book_id=book_id)
+        if overdue in {"true", "1", "yes"}:
+            queryset = queryset.filter(
+                Q(status=LoanStatus.OVERDUE)
+                | Q(return_date__isnull=True, due_date__lt=timezone.localdate())
+            )
+        elif overdue in {"false", "0", "no"}:
+            queryset = queryset.exclude(status=LoanStatus.OVERDUE)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can create loans.")
+        copy = serializer.validated_data["copy"]
+        if not copy.available:
+            raise ValidationError({"copy": "Selected copy is not available for loan."})
+        serializer.save()
+        serializer.instance.copy.available = False
+        serializer.instance.copy.save(update_fields=["available"])
+        update_loan_status(serializer.instance)
+
+    def perform_update(self, serializer):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can update loans.")
+        serializer.save()
+        update_loan_status(serializer.instance)
+
+    def perform_destroy(self, instance):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can delete loans.")
+        instance.copy.available = True
+        instance.copy.save(update_fields=["available"])
+        instance.delete()
+
+    @action(detail=True, methods=["post"])
+    def return_loan(self, request, pk=None):
+        loan = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can return loans.")
+
+        if loan.return_date is None:
+            loan.return_date = timezone.localdate()
+        loan.status = LoanStatus.RETURNED
+        loan.copy.available = True
+        loan.copy.save(update_fields=["available"])
+        loan.save(update_fields=["return_date", "status"])
+
+        overdue_amount = calculate_overdue_amount(loan)
+        if overdue_amount > Decimal("0.00"):
+            fine, _ = Fine.objects.get_or_create(
+                loan=loan,
+                user=loan.user,
+                defaults={"amount": overdue_amount},
+            )
+            if fine.amount != overdue_amount:
+                fine.amount = overdue_amount
+                fine.paid = False
+                fine.paid_date = None
+                fine.save(update_fields=["amount", "paid", "paid_date"])
+            create_notification(
+                loan.user,
+                notification_type=NotificationType.FINE_ISSUED,
+                title="Fine issued after loan return",
+                message=f"Loan #{loan.id} was returned late. Fine amount: {overdue_amount}.",
+                related_object_type="loan",
+                related_object_id=loan.id,
+            )
+
+        return Response(self.get_serializer(loan).data)
+
+    @action(detail=True, methods=["post"])
+    def mark_overdue(self, request, pk=None):
+        loan = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can mark loans overdue.")
+        if loan.return_date is None and loan.due_date < timezone.localdate():
+            loan.status = LoanStatus.OVERDUE
+            loan.save(update_fields=["status"])
+        return Response(self.get_serializer(loan).data)
+
+
+class ReservationViewSet(viewsets.ModelViewSet):
+    queryset = Reservation.objects.select_related("book", "user").all()
+    serializer_class = ReservationSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["book__title", "user__first_name", "user__last_name"]
+    ordering_fields = ["reservation_date", "expiry_date", "status", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            return queryset.none()
+        if not getattr(user, "is_staff", False):
+            queryset = queryset.filter(user_id=user.id)
+
+        book_id = self.request.query_params.get("book")
+        status_filter = self.request.query_params.get("status")
+        if book_id:
+            queryset = queryset.filter(book_id=book_id)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, "user", None)
+        if getattr(user, "is_staff", False):
+            requested_user_id = self.request.data.get("user") or user.id
+            requested_user = get_object_or_404(LibraryUser, pk=int(requested_user_id))
+            serializer.save(user=requested_user)
+        else:
+            serializer.save(user_id=user.id)
+
+    def perform_update(self, serializer):
+        user = getattr(self.request, "user", None)
+        instance = self.get_object()
+        if not getattr(user, "is_staff", False) and instance.user_id != user.id:
+            raise PermissionDenied("You can only update your own reservations.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False) and instance.user_id != user.id:
+            raise PermissionDenied("You can only delete your own reservations.")
+        instance.delete()
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        reservation = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False) and reservation.user_id != user.id:
+            raise PermissionDenied("You can only cancel your own reservations.")
+        reservation.status = ReservationStatus.CANCELLED
+        reservation.save(update_fields=["status"])
+        return Response(self.get_serializer(reservation).data)
+
+    @action(detail=True, methods=["post"])
+    def fulfill(self, request, pk=None):
+        reservation = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can fulfill reservations.")
+        reservation.status = ReservationStatus.FULFILLED
+        reservation.save(update_fields=["status"])
+        available_copy = reservation.book.copies.filter(available=True).first()
+        if available_copy is not None:
+            available_copy.available = False
+            available_copy.save(update_fields=["available"])
+        create_notification(
+            reservation.user,
+            notification_type=NotificationType.RESERVATION_READY,
+            title="Reservation fulfilled",
+            message=f"Your reservation #{reservation.id} for {reservation.book.title} is ready.",
+            related_object_type="reservation",
+            related_object_id=reservation.id,
+        )
+        return Response(self.get_serializer(reservation).data)
+
+
+class FineViewSet(viewsets.ModelViewSet):
+    queryset = Fine.objects.select_related("loan__copy__book", "user").all()
+    serializer_class = FineSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["loan__copy__book__title", "user__first_name", "user__last_name"]
+    ordering_fields = ["issue_date", "paid_date", "amount", "paid", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            return queryset.none()
+        if not getattr(user, "is_staff", False):
+            queryset = queryset.filter(user_id=user.id)
+
+        paid = self.request.query_params.get("paid")
+        if paid in {"true", "1", "yes"}:
+            queryset = queryset.filter(paid=True)
+        elif paid in {"false", "0", "no"}:
+            queryset = queryset.filter(paid=False)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can create fines.")
+        serializer.save()
+        create_notification(
+            serializer.instance.user,
+            notification_type=NotificationType.FINE_ISSUED,
+            title="Fine issued",
+            message=f"Fine #{serializer.instance.id} has been issued for loan #{serializer.instance.loan_id}.",
+            related_object_type="fine",
+            related_object_id=serializer.instance.id,
+        )
+
+    def perform_update(self, serializer):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can update fines.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can delete fines.")
+        instance.delete()
+
+    @action(detail=True, methods=["post"])
+    def settle(self, request, pk=None):
+        fine = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can settle fines.")
+        fine.paid = True
+        fine.paid_date = timezone.localdate()
+        fine.save(update_fields=["paid", "paid_date"])
+        create_notification(
+            fine.user,
+            notification_type=NotificationType.SYSTEM,
+            title="Fine settled",
+            message=f"Fine #{fine.id} has been marked as paid.",
+            related_object_type="fine",
+            related_object_id=fine.id,
+        )
+        return Response(self.get_serializer(fine).data)
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.select_related("book", "requested_by").all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsStaffMember]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["book__title", "supplier", "status", "notes"]
+    ordering_fields = ["requested_at", "expected_delivery_date", "status", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = self.request.query_params.get("status")
+        book_id = self.request.query_params.get("book")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if book_id:
+            queryset = queryset.filter(book_id=book_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, "user", None)
+        serializer.save(
+            requested_by_id=(
+                user.id if getattr(user, "is_authenticated", False) else None
+            )
+        )
+
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        order = self.get_object()
+        order.status = OrderStatus.SUBMITTED
+        order.save(update_fields=["status"])
+        return Response(self.get_serializer(order).data)
+
+    @action(detail=True, methods=["post"])
+    def receive(self, request, pk=None):
+        order = self.get_object()
+        order.status = OrderStatus.RECEIVED
+        order.save(update_fields=["status"])
+        return Response(self.get_serializer(order).data)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        order = self.get_object()
+        order.status = OrderStatus.CANCELLED
+        order.save(update_fields=["status"])
+        return Response(self.get_serializer(order).data)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.select_related("user").all()
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = [
+        "title",
+        "message",
+        "notification_type",
+        "user__first_name",
+        "user__last_name",
+    ]
+    ordering_fields = ["created_at", "read_at", "notification_type", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            return queryset.none()
+        if not getattr(user, "is_staff", False):
+            queryset = queryset.filter(user_id=user.id)
+
+        unread = self.request.query_params.get("unread")
+        notification_type = self.request.query_params.get("type")
+        if unread in {"true", "1", "yes"}:
+            queryset = queryset.filter(is_read=False)
+        elif unread in {"false", "0", "no"}:
+            queryset = queryset.filter(is_read=True)
+        if notification_type:
+            queryset = queryset.filter(notification_type=notification_type)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can create notifications.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can update notifications.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        user = getattr(self.request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied("Only staff members can delete notifications.")
+        instance.delete()
+
+    @action(detail=True, methods=["post"])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False) and notification.user_id != user.id:
+            raise PermissionDenied("You can only mark your own notifications as read.")
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save(update_fields=["is_read", "read_at"])
+        return Response(self.get_serializer(notification).data)
+
+    @action(detail=False, methods=["post"])
+    def mark_all_read(self, request):
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            raise PermissionDenied("Authentication required.")
+        queryset = Notification.objects.filter(user_id=user.id)
+        updated = queryset.filter(is_read=False).update(
+            is_read=True, read_at=timezone.now()
+        )
+        return Response({"updated": updated})
+
+
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_user_model_instance(self, request):
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            raise PermissionDenied("Authentication required.")
+        return get_object_or_404(LibraryUser, pk=user.id)
+
+    def get(self, request):
+        profile = self.get_user_model_instance(request)
+        serializer = ReaderProfileSerializer(profile)
+        payload = serializer.data
+        payload["summary"] = {
+            "loan_count": profile.loans.count(),
+            "reservation_count": profile.reservations.count(),
+            "fine_total": profile.fines.aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00"),
+            "notification_count": profile.notifications.count(),
+        }
+        return Response(payload)
+
+    def patch(self, request):
+        profile = self.get_user_model_instance(request)
+        serializer = ReaderProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def put(self, request):
+        return self.patch(request)

@@ -1,0 +1,356 @@
+from django.db import models
+from django.utils import timezone
+
+
+class LibraryRole(models.TextChoices):
+    READER = "reader", "Reader"
+    LIBRARIAN = "librarian", "Librarian"
+    ADMIN = "admin", "Admin"
+
+
+class BookCondition(models.TextChoices):
+    NEW = "new", "New"
+    GOOD = "good", "Good"
+    WORN = "worn", "Worn"
+    DAMAGED = "damaged", "Damaged"
+
+
+class LoanStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    RETURNED = "returned", "Returned"
+    OVERDUE = "overdue", "Overdue"
+
+
+class ReservationStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    FULFILLED = "fulfilled", "Fulfilled"
+    CANCELLED = "cancelled", "Cancelled"
+    EXPIRED = "expired", "Expired"
+
+
+class OrderStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    SUBMITTED = "submitted", "Submitted"
+    PROCESSING = "processing", "Processing"
+    RECEIVED = "received", "Received"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+class NotificationType(models.TextChoices):
+    LOAN_DUE = "loan_due", "Loan due"
+    RESERVATION_READY = "reservation_ready", "Reservation ready"
+    FINE_ISSUED = "fine_issued", "Fine issued"
+    ORDER_UPDATE = "order_update", "Order update"
+    SYSTEM = "system", "System"
+
+
+class LibraryUser(models.Model):
+    first_name = models.CharField(max_length=50, db_column="firstName")
+    last_name = models.CharField(max_length=50, db_column="lastName")
+    email = models.EmailField(max_length=100, unique=True)
+    birthdate = models.DateField()
+    password = models.CharField(max_length=255)
+    role = models.CharField(
+        max_length=20,
+        choices=LibraryRole.choices,
+        default=LibraryRole.READER,
+    )
+    created_at = models.DateTimeField(db_column="createDate", default=timezone.now)
+
+    class Meta:
+        db_table = "users"
+        ordering = ["last_name", "first_name", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
+    @property
+    def is_staff_member(self) -> bool:
+        return self.role in {LibraryRole.LIBRARIAN, LibraryRole.ADMIN}
+
+
+class Author(models.Model):
+    first_name = models.CharField(max_length=50, db_column="firstName")
+    last_name = models.CharField(max_length=50, db_column="lastName")
+    birthdate = models.DateField(null=True, blank=True)
+    nationality = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        db_table = "authors"
+        ordering = ["last_name", "first_name", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
+
+class Publisher(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    city = models.CharField(max_length=50, null=True, blank=True)
+    country = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        db_table = "publishers"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = "categories"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Location(models.Model):
+    shelf = models.CharField(max_length=20)
+    section = models.CharField(max_length=50, null=True, blank=True)
+    floor = models.SmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = "locations"
+        ordering = ["floor", "section", "shelf", "id"]
+
+    def __str__(self) -> str:
+        parts = [self.shelf]
+        if self.section:
+            parts.append(self.section)
+        if self.floor is not None:
+            parts.append(f"floor {self.floor}")
+        return " / ".join(parts)
+
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    ean = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    publish_year = models.SmallIntegerField(
+        db_column="publishYear", null=True, blank=True
+    )
+    description = models.TextField(null=True, blank=True)
+    publisher = models.ForeignKey(
+        Publisher,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="books",
+    )
+    authors = models.ManyToManyField(
+        Author,
+        through="BookAuthor",
+        related_name="books",
+        blank=True,
+    )
+    categories = models.ManyToManyField(
+        Category,
+        through="BookCategory",
+        related_name="books",
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "books"
+        ordering = ["title", "id"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class BookAuthor(models.Model):
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="book_authors"
+    )
+    author = models.ForeignKey(
+        Author, on_delete=models.CASCADE, related_name="author_books"
+    )
+
+    class Meta:
+        db_table = "book_authors"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["book", "author"], name="unique_book_author"
+            )
+        ]
+        ordering = ["book_id", "author_id"]
+
+
+class BookCategory(models.Model):
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="book_categories"
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="category_books",
+    )
+
+    class Meta:
+        db_table = "book_categories"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["book", "category"], name="unique_book_category"
+            )
+        ]
+        ordering = ["book_id", "category_id"]
+
+
+class Copy(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="copies")
+    location = models.ForeignKey(
+        Location,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="copies",
+    )
+    condition = models.CharField(
+        max_length=20,
+        choices=BookCondition.choices,
+        default=BookCondition.GOOD,
+    )
+    available = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "copies"
+        ordering = ["book_id", "id"]
+
+    def __str__(self) -> str:
+        return f"Copy {self.pk} of {self.book.title}"
+
+
+class Loan(models.Model):
+    copy = models.ForeignKey(Copy, on_delete=models.RESTRICT, related_name="loans")
+    user = models.ForeignKey(
+        LibraryUser, on_delete=models.RESTRICT, related_name="loans"
+    )
+    loan_date = models.DateField(db_column="loanDate", default=timezone.localdate)
+    due_date = models.DateField(db_column="dueDate")
+    return_date = models.DateField(db_column="returnDate", null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=LoanStatus.choices,
+        default=LoanStatus.ACTIVE,
+    )
+
+    class Meta:
+        db_table = "loans"
+        ordering = ["-loan_date", "-id"]
+
+    def __str__(self) -> str:
+        return f"Loan {self.pk} - {self.copy.book.title}"
+
+
+class Reservation(models.Model):
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="reservations"
+    )
+    user = models.ForeignKey(
+        LibraryUser, on_delete=models.CASCADE, related_name="reservations"
+    )
+    reservation_date = models.DateField(
+        db_column="reservationDate", default=timezone.localdate
+    )
+    expiry_date = models.DateField(db_column="expiryDate")
+    status = models.CharField(
+        max_length=20,
+        choices=ReservationStatus.choices,
+        default=ReservationStatus.PENDING,
+    )
+
+    class Meta:
+        db_table = "reservations"
+        ordering = ["reservation_date", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["book", "user"], name="unique_reservation_per_book_user"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Reservation {self.pk} - {self.book.title}"
+
+
+class Fine(models.Model):
+    loan = models.ForeignKey(Loan, on_delete=models.RESTRICT, related_name="fines")
+    user = models.ForeignKey(
+        LibraryUser, on_delete=models.RESTRICT, related_name="fines"
+    )
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    issue_date = models.DateField(db_column="issueDate", default=timezone.localdate)
+    paid_date = models.DateField(db_column="paidDate", null=True, blank=True)
+    paid = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "fines"
+        ordering = ["-issue_date", "-id"]
+
+    def __str__(self) -> str:
+        return f"Fine {self.pk} - {self.amount}"
+
+
+class Order(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.PROTECT, related_name="orders")
+    requested_by = models.ForeignKey(
+        LibraryUser,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="orders_requested",
+    )
+    quantity = models.PositiveSmallIntegerField(default=1)
+    supplier = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=OrderStatus.choices,
+        default=OrderStatus.DRAFT,
+    )
+    requested_at = models.DateTimeField(db_column="requestedAt", default=timezone.now)
+    expected_delivery_date = models.DateField(
+        db_column="expectedDeliveryDate", null=True, blank=True
+    )
+    notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = "orders"
+        ordering = ["-requested_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"Order {self.pk} - {self.book.title}"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(
+        LibraryUser, on_delete=models.CASCADE, related_name="notifications"
+    )
+    notification_type = models.CharField(
+        max_length=30,
+        db_column="notificationType",
+        choices=NotificationType.choices,
+        default=NotificationType.SYSTEM,
+    )
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    related_object_type = models.CharField(
+        db_column="relatedType",
+        max_length=50,
+        null=True,
+        blank=True,
+    )
+    related_object_id = models.PositiveIntegerField(
+        db_column="relatedId", null=True, blank=True
+    )
+    created_at = models.DateTimeField(db_column="createdAt", default=timezone.now)
+    read_at = models.DateTimeField(db_column="readAt", null=True, blank=True)
+    is_read = models.BooleanField(db_column="isRead", default=False)
+
+    class Meta:
+        db_table = "notifications"
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"Notification {self.pk} - {self.title}"

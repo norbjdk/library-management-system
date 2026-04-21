@@ -47,15 +47,17 @@ CREATE TABLE books (
 );
 
 CREATE TABLE book_authors (
+	id SERIAL PRIMARY KEY,
     book_id INT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
     author_id INT NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
-    PRIMARY KEY (book_id, author_id)
+    UNIQUE (book_id, author_id)
 );
 
 CREATE TABLE book_categories (
+	id SERIAL PRIMARY KEY,
     book_id INT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
     category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-    PRIMARY KEY (book_id, category_id)
+    UNIQUE (book_id, category_id)
 );
 
 CREATE TABLE copies (
@@ -83,7 +85,7 @@ CREATE TABLE reservations (
     reservationDate DATE NOT NULL DEFAULT CURRENT_DATE,
     expiryDate DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'fulfilled', 'cancelled', 'expired')),
-	UNIQUE (book_id, status)
+	UNIQUE (book_id, user_id)
 );
 
 CREATE TABLE fines (
@@ -94,4 +96,29 @@ CREATE TABLE fines (
     issueDate DATE NOT NULL DEFAULT CURRENT_DATE,
     paidDate DATE,
     paid BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    book_id INT NOT NULL REFERENCES books(id) ON DELETE RESTRICT,
+    requested_by_id INT REFERENCES users(id) ON DELETE SET NULL,
+    quantity SMALLINT NOT NULL DEFAULT 1,
+    supplier VARCHAR(100),
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'processing', 'received', 'cancelled')),
+    requestedAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    expectedDeliveryDate DATE,
+    notes TEXT
+);
+
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    notificationType VARCHAR(30) NOT NULL DEFAULT 'system' CHECK (notificationType IN ('loan_due', 'reservation_ready', 'fine_issued', 'order_update', 'system')),
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    relatedType VARCHAR(50),
+    relatedId INT,
+    createdAt TIMESTAMP NOT NULL DEFAULT NOW(),
+    readAt TIMESTAMP,
+    isRead BOOLEAN NOT NULL DEFAULT FALSE
 );

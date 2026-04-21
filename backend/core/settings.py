@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "drf_spectacular",
+    "library.apps.LibraryConfig",
 ]
 
 MIDDLEWARE = [
@@ -100,14 +101,17 @@ CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "library.authentication.LibraryTokenAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "ProjektZespolowy API",
-    "DESCRIPTION": "Scaffolding backend for the team development environment.",
+    "TITLE": "System biblioteczny API",
+    "DESCRIPTION": (
+        "Backend API dla systemu bibliotecznego: katalog ksiazek, czytelnicy, "
+        "wypozyczenia, rezerwacje, zamowienia, kary i powiadomienia."
+    ),
     "VERSION": "0.1.0",
 }
