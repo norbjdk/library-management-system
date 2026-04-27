@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+from decimal import Decimal
+
+from django.urls import reverse
+from library.models import Fine, LibraryRole
+
+from .base import LibraryAPITestCase
+
+
+class AuthenticationApiTests(LibraryAPITestCase):
+    def test_login_returns_token_pair_and_profile(self):
+        response = self.client.post(
+            reverse("auth-login"),
+            {"email": self.reader.email.upper(), "password": self.reader.password},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access_token", response.data)
+        self.assertIn("refresh_token", response.data)
+        self.assertEqual(response.data["token_type"], "Bearer")
+        self.assertEqual(response.data["user"]["email"], self.reader.email)
+        self.assertEqual(response.data["user"]["full_name"], self.reader.full_name)
+        self.assertEqual(response.data["user"]["role"], LibraryRole.READER)
+
+    def test_login_rejects_invalid_credentials(self):
+        response = self.client.post(
+            reverse("auth-login"),
+            {"email": self.reader.email, "password": "wrong-password"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("detail", response.data)
+
+    def test_refresh_returns_new_token_pair(self):
+        refresh_token = self.token_pair(self.reader)["refresh_token"]
+
+        response = self.client.post(
+            reverse("auth-refresh"), {"refresh_token": refresh_token}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access_token", response.data)
+        self.assertIn("refresh_token", response.data)
+        self.assertEqual(response.data["token_type"], "Bearer")
+
+    def test_me_endpoint_returns_authenticated_user(self):
+        response = self.authenticated_client(self.reader).get(reverse("auth-me"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["email"], self.reader.email)
+        self.assertEqual(response.data["full_name"], self.reader.full_name)
+        self.assertEqual(response.data["role"], self.reader.role)
+
+    def test_profile_summary_includes_user_counts(self):
+        Fine.objects.create(
+            loan=self.loan,
+            user=self.reader,
+            amount=Decimal("12.50"),
+        )
+
+        response = self.authenticated_client(self.reader).get(reverse("profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["summary"]["loan_count"], 1)
+        self.assertEqual(response.data["summary"]["reservation_count"], 1)
+        self.assertEqual(response.data["summary"]["notification_count"], 1)
+        self.assertEqual(
+            Decimal(str(response.data["summary"]["fine_total"])), Decimal("12.50")
+        )
