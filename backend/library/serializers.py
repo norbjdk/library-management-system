@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -13,18 +12,13 @@ from library.models import (
     Fine,
     LibraryUser,
     Loan,
-    LoanStatus,
     Location,
     Notification,
     Order,
     Publisher,
     Reservation,
-    ReservationStatus,
 )
-from library.services import (
-    build_book_availability_snapshot,
-    calculate_reservation_queue_position,
-)
+from library.services import calculate_reservation_queue_position
 from rest_framework import serializers
 
 
@@ -120,36 +114,28 @@ class BookSerializer(serializers.ModelSerializer):
         ]
 
     def get_copies_count(self, obj):
-        return obj.copies.count()
+        return obj.copies_count
 
     def get_available_copies(self, obj):
-        return obj.copies.filter(available=True).count()
+        return obj.available_copies_count
 
     def get_active_loans(self, obj):
-        return Loan.objects.filter(
-            copy__book=obj,
-            status__in=[LoanStatus.ACTIVE, LoanStatus.OVERDUE],
-            return_date__isnull=True,
-        ).count()
+        return obj.active_loans_count
 
     def get_active_reservations(self, obj):
-        return Reservation.objects.filter(
-            book=obj,
-            status=ReservationStatus.PENDING,
-        ).count()
+        return obj.active_reservations_count
 
     def get_estimated_wait_days(self, obj):
-        snapshot = build_book_availability_snapshot(obj)
-        return snapshot["estimated_wait_days"]
+        return obj.estimated_wait_days()
 
     def create(self, validated_data):
         authors = validated_data.pop("authors", [])
         categories = validated_data.pop("categories", [])
         book = Book.objects.create(**validated_data)
         if authors:
-            book.authors.set(authors)
+            book.set_authors(authors)
         if categories:
-            book.categories.set(categories)
+            book.set_categories(categories)
         return book
 
     def update(self, instance, validated_data):
@@ -157,9 +143,9 @@ class BookSerializer(serializers.ModelSerializer):
         categories = validated_data.pop("categories", None)
         book = super().update(instance, validated_data)
         if authors is not None:
-            book.authors.set(authors)
+            book.set_authors(authors)
         if categories is not None:
-            book.categories.set(categories)
+            book.set_categories(categories)
         return book
 
 
@@ -191,7 +177,7 @@ class ReaderSerializer(serializers.ModelSerializer):
         }
 
     def get_full_name(self, obj):
-        return f"{obj.first_name} {obj.last_name}".strip()
+        return obj.full_name
 
     def get_loan_count(self, obj):
         return obj.loans.count()
@@ -239,21 +225,16 @@ class LoanSerializer(serializers.ModelSerializer):
         ]
 
     def get_user_name(self, obj):
-        return str(obj.user)
+        return obj.user.full_name
 
     def get_days_until_due(self, obj):
-        if obj.return_date:
-            return 0
-        return (obj.due_date - timezone.localdate()).days
+        return obj.days_until_due
 
     def get_overdue_days(self, obj):
-        reference_date = obj.return_date or timezone.localdate()
-        return max((reference_date - obj.due_date).days, 0)
+        return obj.overdue_days
 
     def get_is_overdue(self, obj):
-        return obj.status == LoanStatus.OVERDUE or (
-            obj.return_date is None and obj.due_date < timezone.localdate()
-        )
+        return obj.is_overdue
 
 
 class ReservationSerializer(serializers.ModelSerializer):
@@ -278,18 +259,16 @@ class ReservationSerializer(serializers.ModelSerializer):
         ]
 
     def get_user_name(self, obj):
-        return str(obj.user)
+        return obj.user.full_name
 
     def get_queue_position(self, obj):
         return calculate_reservation_queue_position(obj)
 
     def get_estimated_ready_date(self, obj):
-        queue_position = calculate_reservation_queue_position(obj)
-        if queue_position == 0:
+        estimated_ready_date = obj.estimated_ready_date
+        if estimated_ready_date is None:
             return None
-        available_copies = obj.book.copies.filter(available=True).count()
-        wait_days = max(queue_position - available_copies, 0) * 7
-        return (timezone.localdate() + timedelta(days=wait_days)).isoformat()
+        return estimated_ready_date.isoformat()
 
 
 class FineSerializer(serializers.ModelSerializer):
@@ -313,7 +292,7 @@ class FineSerializer(serializers.ModelSerializer):
         ]
 
     def get_user_name(self, obj):
-        return str(obj.user)
+        return obj.user.full_name
 
     def get_loan_summary(self, obj):
         return f"{obj.loan.copy.book.title} / loan #{obj.loan_id}"
@@ -345,7 +324,7 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
     def get_requested_by_name(self, obj):
-        return str(obj.requested_by) if obj.requested_by_id else None
+        return obj.requested_by.full_name if obj.requested_by_id else None
 
     def get_age_days(self, obj):
         return (timezone.localdate() - obj.requested_at.date()).days
@@ -373,7 +352,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         ]
 
     def get_user_name(self, obj):
-        return str(obj.user)
+        return obj.user.full_name
 
     def get_is_unread(self, obj):
         return not obj.is_read

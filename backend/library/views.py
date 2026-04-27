@@ -19,10 +19,8 @@ from library.models import (
     Notification,
     NotificationType,
     Order,
-    OrderStatus,
     Publisher,
     Reservation,
-    ReservationStatus,
 )
 from library.permissions import IsStaffMember, IsStaffWriteOrReadOnly
 from library.serializers import (
@@ -314,11 +312,10 @@ class LoanViewSet(viewsets.ModelViewSet):
         if not getattr(user, "is_staff", False):
             raise PermissionDenied("Only staff members can create loans.")
         copy = serializer.validated_data["copy"]
-        if not copy.available:
+        if not copy.is_loanable:
             raise ValidationError({"copy": "Selected copy is not available for loan."})
         serializer.save()
-        serializer.instance.copy.available = False
-        serializer.instance.copy.save(update_fields=["available"])
+        serializer.instance.copy.mark_unavailable()
         update_loan_status(serializer.instance)
 
     def perform_update(self, serializer):
@@ -332,8 +329,7 @@ class LoanViewSet(viewsets.ModelViewSet):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
             raise PermissionDenied("Only staff members can delete loans.")
-        instance.copy.available = True
-        instance.copy.save(update_fields=["available"])
+        instance.copy.mark_available()
         instance.delete()
 
     @action(detail=True, methods=["post"])
@@ -343,12 +339,7 @@ class LoanViewSet(viewsets.ModelViewSet):
         if not getattr(user, "is_staff", False):
             raise PermissionDenied("Only staff members can return loans.")
 
-        if loan.return_date is None:
-            loan.return_date = timezone.localdate()
-        loan.status = LoanStatus.RETURNED
-        loan.copy.available = True
-        loan.copy.save(update_fields=["available"])
-        loan.save(update_fields=["return_date", "status"])
+        loan.return_copy()
 
         overdue_amount = calculate_overdue_amount(loan)
         if overdue_amount > Decimal("0.00"):
@@ -380,8 +371,7 @@ class LoanViewSet(viewsets.ModelViewSet):
         if not getattr(user, "is_staff", False):
             raise PermissionDenied("Only staff members can mark loans overdue.")
         if loan.return_date is None and loan.due_date < timezone.localdate():
-            loan.status = LoanStatus.OVERDUE
-            loan.save(update_fields=["status"])
+            loan.refresh_status()
         return Response(self.get_serializer(loan).data)
 
 
@@ -437,8 +427,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False) and reservation.user_id != user.id:
             raise PermissionDenied("You can only cancel your own reservations.")
-        reservation.status = ReservationStatus.CANCELLED
-        reservation.save(update_fields=["status"])
+        reservation.cancel()
         return Response(self.get_serializer(reservation).data)
 
     @action(detail=True, methods=["post"])
@@ -447,12 +436,13 @@ class ReservationViewSet(viewsets.ModelViewSet):
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False):
             raise PermissionDenied("Only staff members can fulfill reservations.")
-        reservation.status = ReservationStatus.FULFILLED
-        reservation.save(update_fields=["status"])
-        available_copy = reservation.book.copies.filter(available=True).first()
-        if available_copy is not None:
-            available_copy.available = False
-            available_copy.save(update_fields=["available"])
+        available_copy = reservation.book.next_available_copy()
+        if available_copy is None:
+            raise ValidationError(
+                {"book": "No available copy can fulfill this reservation."}
+            )
+        reservation.fulfill()
+        available_copy.mark_unavailable()
         create_notification(
             reservation.user,
             notification_type=NotificationType.RESERVATION_READY,
@@ -562,22 +552,19 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         order = self.get_object()
-        order.status = OrderStatus.SUBMITTED
-        order.save(update_fields=["status"])
+        order.submit()
         return Response(self.get_serializer(order).data)
 
     @action(detail=True, methods=["post"])
     def receive(self, request, pk=None):
         order = self.get_object()
-        order.status = OrderStatus.RECEIVED
-        order.save(update_fields=["status"])
+        order.receive()
         return Response(self.get_serializer(order).data)
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         order = self.get_object()
-        order.status = OrderStatus.CANCELLED
-        order.save(update_fields=["status"])
+        order.cancel()
         return Response(self.get_serializer(order).data)
 
 
@@ -637,9 +624,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False) and notification.user_id != user.id:
             raise PermissionDenied("You can only mark your own notifications as read.")
-        notification.is_read = True
-        notification.read_at = timezone.now()
-        notification.save(update_fields=["is_read", "read_at"])
+        notification.mark_read()
         return Response(self.get_serializer(notification).data)
 
     @action(detail=False, methods=["post"])

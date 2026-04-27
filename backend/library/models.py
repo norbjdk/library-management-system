@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+from datetime import date, timedelta
+
 from django.db import models
 from django.utils import timezone
 
@@ -13,6 +18,15 @@ class BookCondition(models.TextChoices):
     GOOD = "good", "Good"
     WORN = "worn", "Worn"
     DAMAGED = "damaged", "Damaged"
+
+
+LOANABLE_BOOK_CONDITIONS = (
+    BookCondition.NEW,
+    BookCondition.GOOD,
+    BookCondition.WORN,
+)
+
+RESERVATION_QUEUE_STEP_DAYS = 7
 
 
 class LoanStatus(models.TextChoices):
@@ -62,7 +76,11 @@ class LibraryUser(models.Model):
         ordering = ["last_name", "first_name", "id"]
 
     def __str__(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return self.full_name
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def is_staff_member(self) -> bool:
@@ -160,6 +178,81 @@ class Book(models.Model):
     def __str__(self) -> str:
         return self.title
 
+    def set_authors(self, authors: Iterable[Author]) -> None:
+        self.authors.set(authors)
+
+    def set_categories(self, categories: Iterable[Category]) -> None:
+        self.categories.set(categories)
+
+    @property
+    def copies_count(self) -> int:
+        return self.copies.count()
+
+    @property
+    def available_copies_count(self) -> int:
+        return self.copies.filter(
+            available=True,
+            condition__in=LOANABLE_BOOK_CONDITIONS,
+        ).count()
+
+    @property
+    def active_loans_count(self) -> int:
+        return Loan.objects.filter(
+            copy__book=self,
+            status__in=[LoanStatus.ACTIVE, LoanStatus.OVERDUE],
+            return_date__isnull=True,
+        ).count()
+
+    @property
+    def active_reservations_count(self) -> int:
+        return Reservation.objects.filter(
+            book=self,
+            status=ReservationStatus.PENDING,
+        ).count()
+
+    def next_available_copy(self) -> Copy | None:
+        return (
+            self.copies.filter(
+                available=True,
+                condition__in=LOANABLE_BOOK_CONDITIONS,
+            )
+            .order_by("id")
+            .first()
+        )
+
+    def estimated_wait_days(
+        self, queue_step_days: int = RESERVATION_QUEUE_STEP_DAYS
+    ) -> int:
+        return (
+            max(self.active_reservations_count - self.available_copies_count, 0)
+            * queue_step_days
+        )
+
+    def availability_snapshot(
+        self, queue_step_days: int = RESERVATION_QUEUE_STEP_DAYS
+    ) -> dict[str, object]:
+        copies = list(self.copies.select_related("location").all())
+        total_copies = len(copies)
+        available_copies = sum(1 for copy in copies if copy.is_loanable)
+        estimated_wait_days = (
+            max(self.active_reservations_count - available_copies, 0) * queue_step_days
+        )
+
+        return {
+            "book_id": self.id,
+            "title": self.title,
+            "total_copies": total_copies,
+            "available_copies": available_copies,
+            "active_loans": self.active_loans_count,
+            "active_reservations": self.active_reservations_count,
+            "estimated_wait_days": estimated_wait_days,
+            "estimated_ready_date": (
+                timezone.localdate() + timedelta(days=estimated_wait_days)
+                if estimated_wait_days
+                else timezone.localdate()
+            ).isoformat(),
+        }
+
 
 class BookAuthor(models.Model):
     book = models.ForeignKey(
@@ -222,6 +315,20 @@ class Copy(models.Model):
     def __str__(self) -> str:
         return f"Copy {self.pk} of {self.book.title}"
 
+    @property
+    def is_loanable(self) -> bool:
+        return self.available and self.condition in LOANABLE_BOOK_CONDITIONS
+
+    def mark_available(self) -> None:
+        if not self.available:
+            self.available = True
+            self.save(update_fields=["available"])
+
+    def mark_unavailable(self) -> None:
+        if self.available:
+            self.available = False
+            self.save(update_fields=["available"])
+
 
 class Loan(models.Model):
     copy = models.ForeignKey(Copy, on_delete=models.RESTRICT, related_name="loans")
@@ -243,6 +350,40 @@ class Loan(models.Model):
 
     def __str__(self) -> str:
         return f"Loan {self.pk} - {self.copy.book.title}"
+
+    @property
+    def days_until_due(self) -> int:
+        if self.return_date:
+            return 0
+        return (self.due_date - timezone.localdate()).days
+
+    @property
+    def overdue_days(self) -> int:
+        reference_date = self.return_date or timezone.localdate()
+        return max((reference_date - self.due_date).days, 0)
+
+    @property
+    def is_overdue(self) -> bool:
+        return self.status == LoanStatus.OVERDUE or (
+            self.return_date is None and self.due_date < timezone.localdate()
+        )
+
+    def return_copy(self, return_date: date | None = None) -> None:
+        if self.return_date is None:
+            self.return_date = return_date or timezone.localdate()
+        self.status = LoanStatus.RETURNED
+        self.copy.mark_available()
+        self.save(update_fields=["return_date", "status"])
+
+    def refresh_status(self, as_of: date | None = None) -> None:
+        reference_date = as_of or timezone.localdate()
+        if self.return_date is not None:
+            self.status = LoanStatus.RETURNED
+        elif self.due_date < reference_date:
+            self.status = LoanStatus.OVERDUE
+        else:
+            self.status = LoanStatus.ACTIVE
+        self.save(update_fields=["status"])
 
 
 class Reservation(models.Model):
@@ -273,6 +414,44 @@ class Reservation(models.Model):
 
     def __str__(self) -> str:
         return f"Reservation {self.pk} - {self.book.title}"
+
+    @property
+    def queue_position(self) -> int:
+        if self.status != ReservationStatus.PENDING:
+            return 0
+
+        pending_reservations = Reservation.objects.filter(
+            book=self.book,
+            status=ReservationStatus.PENDING,
+        ).order_by("reservation_date", "id")
+
+        for index, queued_reservation in enumerate(pending_reservations, start=1):
+            if queued_reservation.pk == self.pk:
+                return index
+
+        return 0
+
+    @property
+    def estimated_ready_date(self) -> date | None:
+        queue_position = self.queue_position
+        if queue_position == 0:
+            return None
+
+        wait_days = (
+            max(queue_position - self.book.available_copies_count, 0)
+            * RESERVATION_QUEUE_STEP_DAYS
+        )
+        return timezone.localdate() + timedelta(days=wait_days)
+
+    def cancel(self) -> None:
+        if self.status != ReservationStatus.CANCELLED:
+            self.status = ReservationStatus.CANCELLED
+            self.save(update_fields=["status"])
+
+    def fulfill(self) -> None:
+        if self.status != ReservationStatus.FULFILLED:
+            self.status = ReservationStatus.FULFILLED
+            self.save(update_fields=["status"])
 
 
 class Fine(models.Model):
@@ -322,6 +501,21 @@ class Order(models.Model):
     def __str__(self) -> str:
         return f"Order {self.pk} - {self.book.title}"
 
+    def submit(self) -> None:
+        if self.status != OrderStatus.SUBMITTED:
+            self.status = OrderStatus.SUBMITTED
+            self.save(update_fields=["status"])
+
+    def receive(self) -> None:
+        if self.status != OrderStatus.RECEIVED:
+            self.status = OrderStatus.RECEIVED
+            self.save(update_fields=["status"])
+
+    def cancel(self) -> None:
+        if self.status != OrderStatus.CANCELLED:
+            self.status = OrderStatus.CANCELLED
+            self.save(update_fields=["status"])
+
 
 class Notification(models.Model):
     user = models.ForeignKey(
@@ -354,3 +548,9 @@ class Notification(models.Model):
 
     def __str__(self) -> str:
         return f"Notification {self.pk} - {self.title}"
+
+    def mark_read(self) -> None:
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=["is_read", "read_at"])
