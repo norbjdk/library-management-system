@@ -1,6 +1,9 @@
 <app-navbar />
-<main class="min-h-screen bg-slate-100">
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <router-outlet />
-  </div>
-</main>
+<div class="flex min-h-screen bg-slate-100">
+  <app-sidebar />
+  <main class="flex-1">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <router-outlet />
+    </div>
+  </main>
+</div>
