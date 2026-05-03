@@ -20,21 +20,21 @@ export class LoanList {
   ];
 
   loans: Loan[] = [
-    { id: 1, user: 'Anna Nowak', userId: 1, book: 'Wiedźmin: Ostatnie życzenie', bookId: 1, isbn: '978-83-7785-149-2', borrowedDate: '2026-05-01', dueDate: '2026-05-15', status: 'active' },
-    { id: 2, user: 'Piotr Wiśniewski', userId: 2, book: 'Diuna', bookId: 6, isbn: '978-83-0000-000-5', borrowedDate: '2026-04-20', dueDate: '2026-05-04', status: 'overdue' },
-    { id: 3, user: 'Maria Kowalska', userId: 3, book: 'Solaris', bookId: 3, isbn: '978-83-0000-000-2', borrowedDate: '2026-04-28', dueDate: '2026-05-12', status: 'active' },
-    { id: 4, user: 'Tomasz Zając', userId: 4, book: 'Pan Tadeusz', bookId: 2, isbn: '978-83-0000-000-1', borrowedDate: '2026-04-15', dueDate: '2026-04-29', status: 'overdue' },
-    { id: 5, user: 'Karolina Lewandowska', userId: 5, book: 'Harry Potter', bookId: 4, isbn: '978-83-0000-000-3', borrowedDate: '2026-05-02', dueDate: '2026-05-16', status: 'active' },
-    { id: 6, user: 'Marek Jabłoński', userId: 6, book: 'Zbrodnia i kara', bookId: 5, isbn: '978-83-0000-000-4', borrowedDate: '2026-04-01', dueDate: '2026-04-15', returnedDate: '2026-04-14', status: 'returned' },
-    { id: 7, user: 'Ewa Kamińska', userId: 7, book: 'Wiedźmin: Ostatnie życzenie', bookId: 1, isbn: '978-83-7785-149-2', borrowedDate: '2026-05-03', dueDate: '2026-05-17', status: 'reserved' },
+    { id: 1, user: 1, copy: 1, loan_date: '2026-05-01', due_date: '2026-05-15', return_date: null, status: 'active' },
+    { id: 2, user: 2, copy: 6, loan_date: '2026-04-20', due_date: '2026-05-04', return_date: null, status: 'overdue' },
+    { id: 3, user: 3, copy: 3, loan_date: '2026-04-28', due_date: '2026-05-12', return_date: null, status: 'active' },
+    { id: 4, user: 4, copy: 2, loan_date: '2026-04-15', due_date: '2026-04-29', return_date: null, status: 'overdue' },
+    { id: 5, user: 5, copy: 4, loan_date: '2026-05-02', due_date: '2026-05-16', return_date: null, status: 'active' },
+    { id: 6, user: 6, copy: 5, loan_date: '2026-04-01', due_date: '2026-04-15', return_date: '2026-04-14', status: 'returned' },
+    { id: 7, user: 7, copy: 1, loan_date: '2026-05-03', due_date: '2026-05-17', return_date: null, status: 'reserved' },
   ];
 
   get filteredLoans(): Loan[] {
     return this.loans.filter(l => {
       const matchesFilter = this.activeFilter === 'all' || l.status === this.activeFilter;
       const matchesSearch = !this.searchQuery ||
-        l.user.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        l.book.toLowerCase().includes(this.searchQuery.toLowerCase());
+        l.user.toString().includes(this.searchQuery) ||
+        l.copy.toString().includes(this.searchQuery);
       return matchesFilter && matchesSearch;
     });
   }

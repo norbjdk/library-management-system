@@ -13,59 +13,61 @@
   <!-- Search -->
   <div class="relative">
     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-    <input
-      type="text"
-      placeholder="Szukaj po tytule, autorze, kategorii..."
-      [(ngModel)]="searchQuery"
-      class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white"
-    />
+    <input type="text" placeholder="Szukaj po tytule, autorze, kategorii..." [(ngModel)]="searchQuery"
+      class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white" />
   </div>
 
   <!-- Grid -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @for (book of filteredBooks; track book.id) {
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
-        <div class="flex items-start justify-between gap-2 mb-3">
-          <div>
-            <h3 class="font-semibold text-slate-800 leading-tight">{{ book.title }}</h3>
-            <p class="text-sm text-slate-500 mt-0.5">{{ book.author }}</p>
-          </div>
-          <span class="shrink-0 text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(book.status) }}">
-            {{ getStatusLabel(book.status) }}
-          </span>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <h3 class="font-semibold text-slate-800 leading-tight">{{ book.title }}</h3>
+          <p class="text-sm text-slate-500 mt-0.5">
+            {{ book.authors[0]?.first_name }} {{ book.authors[0]?.last_name }}
+          </p>
         </div>
+        <span class="shrink-0 text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(book) }}">
+          {{ getStatusLabel(book) }}
+        </span>
+      </div>
 
-        <div class="space-y-1.5 text-xs text-slate-500">
-          <div class="flex justify-between">
-            <span>Kategoria</span>
-            <span class="font-medium text-slate-700">{{ book.category }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Lokalizacja</span>
-            <span class="font-medium text-slate-700">{{ book.location }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Dostępne egz.</span>
-            <span class="font-medium text-slate-700">{{ book.availableCopies }} / {{ book.totalCopies }}</span>
-          </div>
+      <div class="space-y-1.5 text-xs text-slate-500">
+        <div class="flex justify-between">
+          <span>Kategoria</span>
+          <span class="font-medium text-slate-700">{{ book.categories[0]?.name ?? '—' }}</span>
         </div>
-
-        <div class="mt-4 flex gap-2">
-          <button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded-lg transition-colors">
-            Szczegóły
-          </button>
-          @if (book.status === 'available') {
-            <button class="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-2 rounded-lg transition-colors">
-              Wypożycz
-            </button>
-          }
-          @if (book.status === 'borrowed' || book.status === 'reserved') {
-            <button class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-2 rounded-lg transition-colors">
-              Zarezerwuj
-            </button>
-          }
+        <div class="flex justify-between">
+          <span>Wydawca</span>
+          <span class="font-medium text-slate-700">{{ book.publisher.name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Lokalizacja</span>
+          <span class="font-medium text-slate-700">{{ book.copies[0]?.location?.shelf ?? '—' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Dostępne egz.</span>
+          <span class="font-medium text-slate-700">{{ getAvailableCopies(book) }} / {{ book.copies.length }}</span>
         </div>
       </div>
+
+      <div class="mt-4 flex gap-2">
+        <button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded-lg transition-colors">
+          Szczegóły
+        </button>
+        @if (getStatus(book) === 'available') {
+        <button class="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-2 rounded-lg transition-colors">
+          Wypożycz
+        </button>
+        }
+        @if (getStatus(book) === 'unavailable') {
+        <button class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-2 rounded-lg transition-colors">
+          Zarezerwuj
+        </button>
+        }
+      </div>
+    </div>
     }
   </div>
 </div>
