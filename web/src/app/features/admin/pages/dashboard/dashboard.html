@@ -1,0 +1,58 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Dashboard</h1>
+        <p class="text-sm text-slate-500 mt-1">Witaj z powrotem, Administrator</p>
+    </div>
+
+    <!-- Karty statystyk -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        @for (card of cards; track card.label) {
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-2xl">{{ card.icon }}</span>
+                <span class="text-xs font-medium px-2 py-1 rounded-full {{ card.color }}">
+                    {{ card.value }}
+                </span>
+            </div>
+            <p class="text-sm text-slate-500">{{ card.label }}</p>
+        </div>
+        }
+    </div>
+
+    <!-- Ostatnie wypożyczenia -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-800">Ostatnie wypożyczenia</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                        <th class="px-6 py-3 text-left">Użytkownik</th>
+                        <th class="px-6 py-3 text-left">Książka</th>
+                        <th class="px-6 py-3 text-left">Data wypożyczenia</th>
+                        <th class="px-6 py-3 text-left">Termin zwrotu</th>
+                        <th class="px-6 py-3 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (loan of recentLoans; track loan.user) {
+                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-slate-800">{{ loan.user }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ loan.book }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ loan.date }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ loan.due }}</td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(loan.status) }}">
+                                {{ getStatusLabel(loan.status) }}
+                            </span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
