@@ -5,10 +5,10 @@
 
     <nav class="flex-1 px-3 py-4">
         <ul class="flex flex-col gap-1">
-            @for (item of menuItems; track item.path) {
+            @for (item of menuItems(); track item.path) {
             <li>
-                <a [routerLink]="item.path" routerLinkActive="bg-slate-700 text-white"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                <a [routerLink]="item.path" routerLinkActive="bg-slate-700 text-white" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-slate-300 hover:bg-slate-700
+                hover:text-white transition-colors">
                     <span>{{ item.icon }}</span>
                     <span>{{ item.label }}</span>
                 </a>
@@ -19,7 +19,7 @@
 
     <div class="px-6 py-4 border-t border-slate-700">
         <p class="text-xs text-slate-400">Zalogowany jako</p>
-        <p class="text-sm font-medium mt-0.5">Jan Kowalski</p>
-        <p class="text-xs text-slate-400">Administrator</p>
+        <p class="text-sm font-medium mt-0.5">{{ fullName() }}</p>
+        <p class="text-xs text-slate-400">{{ roleLabel() }}</p>
     </div>
 </aside>
