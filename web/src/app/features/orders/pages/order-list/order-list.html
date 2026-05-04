@@ -1,1 +1,105 @@
-<p>order-list works!</p>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Zamówienia</h1>
+            <p class="text-sm text-slate-500 mt-1">{{ count() }} rekordów</p>
+        </div>
+        <button class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+            + Nowe zamówienie
+        </button>
+    </div>
+
+    <!-- Filtry -->
+    <div class="flex gap-2 flex-wrap">
+        @for (filter of filters; track filter.value) {
+        <button (click)="setFilter(filter.value)" class="px-3 py-2 rounded-lg text-sm transition-colors border
+          {{ activeFilter === filter.value
+            ? 'bg-slate-800 text-white border-slate-800'
+            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+            {{ filter.label }}
+        </button>
+        }
+    </div>
+
+    <!-- Error -->
+    @if (error()) {
+    <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+        {{ error() }}
+    </div>
+    }
+
+    <!-- Loading -->
+    @if (loading()) {
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+        <p class="text-slate-400 text-sm animate-pulse">Ładowanie zamówień...</p>
+    </div>
+    }
+
+    <!-- Tabela -->
+    @if (!loading()) {
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                    <th class="px-6 py-3 text-left">ID</th>
+                    <th class="px-6 py-3 text-left">Książka</th>
+                    <th class="px-6 py-3 text-left">Dostawca</th>
+                    <th class="px-6 py-3 text-left">Zamówiono przez</th>
+                    <th class="px-6 py-3 text-left">Data zamówienia</th>
+                    <th class="px-6 py-3 text-left">Oczekiwana dostawa</th>
+                    <th class="px-6 py-3 text-left">Status</th>
+                    <th class="px-6 py-3 text-left">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (order of orders(); track order.id) {
+                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 text-slate-400">#{{ order.id }}</td>
+                    <td class="px-6 py-4 font-medium text-slate-800">Książka #{{ order.book }}</td>
+                    <td class="px-6 py-4 text-slate-600">{{ order.supplier || '—' }}</td>
+                    <td class="px-6 py-4 text-slate-600">Użytkownik #{{ order.requested_by }}</td>
+                    <td class="px-6 py-4 text-slate-500">{{ order.requested_at }}</td>
+                    <td class="px-6 py-4 text-slate-500">{{ order.expected_delivery_date ?? '—' }}</td>
+                    <td class="px-6 py-4">
+                        <span class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(order.status) }}">
+                            {{ getStatusLabel(order.status) }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-2">
+                            @if (order.status === 'draft') {
+                            <button (click)="submitOrder(order.id)"
+                                class="text-xs text-blue-600 hover:text-blue-800 underline">
+                                Złóż
+                            </button>
+                            }
+                            @if (order.status === 'submitted') {
+                            <button (click)="receiveOrder(order.id)"
+                                class="text-xs text-green-600 hover:text-green-800 underline">
+                                Odbierz
+                            </button>
+                            }
+                            @if (order.status === 'draft' || order.status === 'submitted') {
+                            <button (click)="cancelOrder(order.id)"
+                                class="text-xs text-red-600 hover:text-red-800 underline">
+                                Anuluj
+                            </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                }
+
+                @empty {
+                <tr>
+                    <td colspan="8" class="px-6 py-16 text-center text-slate-400 text-sm">
+                        Brak zamówień
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
