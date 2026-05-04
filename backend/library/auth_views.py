@@ -28,6 +28,24 @@ class LoginView(APIView):
         return Response({"user": profile, **tokens})
 
 
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payload = request.data.copy()
+        payload["email"] = (payload.get("email") or "").strip().lower()
+        payload["first_name"] = (payload.get("first_name") or "").strip()
+        payload["last_name"] = (payload.get("last_name") or "").strip()
+
+        serializer = ReaderProfileSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        tokens = issue_token_pair(user)
+        profile = ReaderProfileSerializer(user).data
+        return Response({"user": profile, **tokens}, status=201)
+
+
 class RefreshView(APIView):
     permission_classes = [AllowAny]
 

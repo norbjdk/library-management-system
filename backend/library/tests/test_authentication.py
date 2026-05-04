@@ -9,6 +9,28 @@ from .base import LibraryAPITestCase
 
 
 class AuthenticationApiTests(LibraryAPITestCase):
+    def test_register_creates_reader_and_returns_token_pair(self):
+        response = self.client.post(
+            reverse("auth-register"),
+            {
+                "email": "  new.reader@library.com ",
+                "password": "new-passwd",
+                "first_name": "  Ewa ",
+                "last_name": " Nowak ",
+                "birthdate": "2000-05-20",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIn("access_token", response.data)
+        self.assertIn("refresh_token", response.data)
+        self.assertEqual(response.data["user"]["email"], "new.reader@library.com")
+        self.assertEqual(response.data["user"]["first_name"], "Ewa")
+        self.assertEqual(response.data["user"]["last_name"], "Nowak")
+        self.assertEqual(response.data["user"]["role"], LibraryRole.READER)
+        self.assertFalse(response.data["user"]["is_staff"])
+
     def test_login_returns_token_pair_and_profile(self):
         response = self.client.post(
             reverse("auth-login"),
@@ -23,6 +45,7 @@ class AuthenticationApiTests(LibraryAPITestCase):
         self.assertEqual(response.data["user"]["email"], self.reader.email)
         self.assertEqual(response.data["user"]["full_name"], self.reader.full_name)
         self.assertEqual(response.data["user"]["role"], LibraryRole.READER)
+        self.assertFalse(response.data["user"]["is_staff"])
 
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
@@ -53,6 +76,7 @@ class AuthenticationApiTests(LibraryAPITestCase):
         self.assertEqual(response.data["email"], self.reader.email)
         self.assertEqual(response.data["full_name"], self.reader.full_name)
         self.assertEqual(response.data["role"], self.reader.role)
+        self.assertFalse(response.data["is_staff"])
 
     def test_profile_summary_includes_user_counts(self):
         Fine.objects.create(

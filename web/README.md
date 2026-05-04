@@ -49,10 +49,16 @@ ng test
 For end-to-end (e2e) testing, run:
 
 ```bash
-ng e2e
+npm run e2e
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+This workspace uses Playwright smoke tests with mocked API responses. Before the first run install the browser bundle:
+
+```bash
+npx playwright install
+```
+
+Use `npm run e2e:headed` when you want to watch the browser interactions locally.
 
 ## Additional Resources
 

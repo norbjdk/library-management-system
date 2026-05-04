@@ -10,6 +10,7 @@ from library.models import (
     Category,
     Copy,
     Fine,
+    LibraryRole,
     LibraryUser,
     Loan,
     Location,
@@ -154,6 +155,7 @@ class ReaderSerializer(serializers.ModelSerializer):
     loan_count = serializers.SerializerMethodField()
     reservation_count = serializers.SerializerMethodField()
     fine_total = serializers.SerializerMethodField()
+    is_staff = serializers.BooleanField(source="is_staff_member", read_only=True)
 
     class Meta:
         model = LibraryUser
@@ -166,6 +168,7 @@ class ReaderSerializer(serializers.ModelSerializer):
             "birthdate",
             "password",
             "role",
+            "is_staff",
             "created_at",
             "loan_count",
             "reservation_count",
@@ -196,6 +199,10 @@ class ReaderProfileSerializer(ReaderSerializer):
             **ReaderSerializer.Meta.extra_kwargs,
             "role": {"read_only": True},
         }
+
+    def create(self, validated_data):
+        validated_data["role"] = LibraryRole.READER
+        return super().create(validated_data)
 
 
 class LoanSerializer(serializers.ModelSerializer):

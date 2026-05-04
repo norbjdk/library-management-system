@@ -1,31 +1,57 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Book } from '../../../../core/models/book';
 import { Order } from '../../../../core/models/order';
 import { ApiService } from '../../../../core/services/api.service';
 
 @Component({
   selector: 'app-order-list',
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './order-list.html',
 })
 export class OrderList implements OnInit {
   activeFilter: Order['status'] | 'all' = 'all';
   orders = signal<Order[]>([]);
+  books = signal<Book[]>([]);
   loading = signal(false);
+  creating = signal(false);
+  showCreateForm = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
+
+  orderForm = {
+    bookId: '',
+    quantity: 1,
+    supplier: '',
+    expected_delivery_date: '',
+    notes: '',
+  };
 
   filters: { label: string; value: Order['status'] | 'all' }[] = [
     { label: 'Wszystkie', value: 'all' },
     { label: 'Szkic', value: 'draft' },
     { label: 'Złożone', value: 'submitted' },
+    { label: 'W realizacji', value: 'processing' },
     { label: 'Odebrane', value: 'received' },
     { label: 'Anulowane', value: 'cancelled' },
   ];
 
-  constructor(private api: ApiService) { }
+  constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.loadOrders();
+    this.loadBooks();
+  }
+
+  loadBooks() {
+    this.api.getBooks().subscribe({
+      next: (response) => {
+        this.books.set(response.results);
+      },
+      error: () => {
+        this.error.set('Nie udało się pobrać listy książek do formularza zamówienia.');
+      },
+    });
   }
 
   loadOrders() {
@@ -44,7 +70,7 @@ export class OrderList implements OnInit {
       error: () => {
         this.error.set('Nie udało się załadować zamówień.');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -53,24 +79,66 @@ export class OrderList implements OnInit {
     this.loadOrders();
   }
 
+  toggleCreateForm() {
+    this.showCreateForm.update((open) => !open);
+    this.error.set(null);
+  }
+
+  createOrder() {
+    if (!this.orderForm.bookId) {
+      this.error.set('Wybierz książkę do zamówienia.');
+      return;
+    }
+
+    this.creating.set(true);
+    this.error.set(null);
+
+    const payload: Partial<Order> & { book: number } = {
+      book: Number(this.orderForm.bookId),
+      quantity: this.orderForm.quantity || 1,
+      supplier: this.orderForm.supplier.trim(),
+      notes: this.orderForm.notes.trim(),
+      expected_delivery_date: this.orderForm.expected_delivery_date || null,
+    };
+
+    this.api.createOrder(payload).subscribe({
+      next: () => {
+        this.orderForm = {
+          bookId: '',
+          quantity: 1,
+          supplier: '',
+          expected_delivery_date: '',
+          notes: '',
+        };
+        this.creating.set(false);
+        this.showCreateForm.set(false);
+        this.loadOrders();
+      },
+      error: () => {
+        this.error.set('Nie udało się utworzyć zamówienia.');
+        this.creating.set(false);
+      },
+    });
+  }
+
   submitOrder(id: number) {
     this.api.submitOrder(id).subscribe({
       next: () => this.loadOrders(),
-      error: () => this.error.set('Nie udało się złożyć zamówienia.')
+      error: () => this.error.set('Nie udało się złożyć zamówienia.'),
     });
   }
 
   receiveOrder(id: number) {
     this.api.receiveOrder(id).subscribe({
       next: () => this.loadOrders(),
-      error: () => this.error.set('Nie udało się odebrać zamówienia.')
+      error: () => this.error.set('Nie udało się odebrać zamówienia.'),
     });
   }
 
   cancelOrder(id: number) {
     this.api.cancelOrder(id).subscribe({
       next: () => this.loadOrders(),
-      error: () => this.error.set('Nie udało się anulować zamówienia.')
+      error: () => this.error.set('Nie udało się anulować zamówienia.'),
     });
   }
 
@@ -78,6 +146,7 @@ export class OrderList implements OnInit {
     const classes = {
       draft: 'bg-slate-100 text-slate-600',
       submitted: 'bg-blue-100 text-blue-700',
+      processing: 'bg-violet-100 text-violet-700',
       received: 'bg-green-100 text-green-700',
       cancelled: 'bg-red-100 text-red-700',
     };
@@ -88,6 +157,7 @@ export class OrderList implements OnInit {
     const labels = {
       draft: 'Szkic',
       submitted: 'Złożone',
+      processing: 'W realizacji',
       received: 'Odebrane',
       cancelled: 'Anulowane',
     };

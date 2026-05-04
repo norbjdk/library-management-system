@@ -8,14 +8,20 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './navbar.html',
 })
 export class NavbarComponent {
-  navItems = [
-    { label: 'Katalog', path: '/catalog', icon: '📚' },
-    { label: 'Wypożyczenia', path: '/loans', icon: '🔄' },
-    { label: 'Kolejka', path: '/queue', icon: '⏳' },
-    { label: 'Kary', path: '/fines', icon: '💰' },
-    { label: 'Zamówienia', path: '/orders', icon: '📦' },
-    { label: 'Powiadomienia', path: '/notifications', icon: '🔔' },
-  ];
+  navItems = computed(() => {
+    const items = [
+      { label: 'Katalog', path: '/catalog', icon: '📚', staffOnly: false },
+      { label: 'Wypożyczenia', path: '/loans', icon: '🔄', staffOnly: false },
+      { label: 'Kolejka', path: '/queue', icon: '⏳', staffOnly: false },
+      { label: 'Kary', path: '/fines', icon: '💰', staffOnly: false },
+      { label: 'Powiadomienia', path: '/notifications', icon: '🔔', staffOnly: false },
+      { label: 'Profil', path: '/profile', icon: '🪪', staffOnly: false },
+      { label: 'Zamówienia', path: '/orders', icon: '📦', staffOnly: true },
+      { label: 'Dashboard', path: '/admin', icon: '📊', staffOnly: true },
+    ];
+
+    return this.auth.isStaff() ? items : items.filter((item) => !item.staffOnly);
+  });
 
   fullName = computed(() => {
     const user = this.auth.user();
@@ -30,10 +36,10 @@ export class NavbarComponent {
       librarian: 'Bibliotekarz',
       reader: 'Czytelnik',
     };
-    return role ? labels[role] ?? role : '';
+    return role ? (labels[role] ?? role) : '';
   });
 
-  constructor(private auth: AuthService) { }
+  constructor(private auth: AuthService) {}
 
   logout() {
     this.auth.logout();

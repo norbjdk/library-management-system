@@ -1,13 +1,14 @@
-<aside class="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
+<aside class="sidebar-surface hidden lg:flex w-72 min-h-screen text-white flex-col">
     <div class="px-6 py-5 border-b border-slate-700">
         <p class="text-xs uppercase tracking-widest text-slate-400">Panel zarządzania</p>
+        <h2 class="brand-mark text-xl mt-2">Nawigacja biblioteki</h2>
     </div>
 
     <nav class="flex-1 px-3 py-4">
         <ul class="flex flex-col gap-1">
             @for (item of menuItems(); track item.path) {
             <li>
-                <a [routerLink]="item.path" routerLinkActive="bg-slate-700 text-white" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-slate-300 hover:bg-slate-700
+                <a [routerLink]="item.path" routerLinkActive="bg-white/12 text-white" class="flex items-center gap-3 px-3 py-3 rounded-2xl text-sm text-slate-300 hover:bg-white/10
                 hover:text-white transition-colors">
                     <span>{{ item.icon }}</span>
                     <span>{{ item.label }}</span>

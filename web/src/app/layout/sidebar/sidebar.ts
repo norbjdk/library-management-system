@@ -17,12 +17,11 @@ export class SidebarComponent {
     { label: 'Kary', path: '/fines', icon: '💰', staffOnly: false },
     { label: 'Zamówienia', path: '/orders', icon: '📦', staffOnly: true },
     { label: 'Powiadomienia', path: '/notifications', icon: '🔔', staffOnly: false },
+    { label: 'Profil', path: '/profile', icon: '🪪', staffOnly: false },
   ];
 
   menuItems = computed(() =>
-    this.auth.isStaff()
-      ? this.allItems
-      : this.allItems.filter(i => !i.staffOnly)
+    this.auth.isStaff() ? this.allItems : this.allItems.filter((i) => !i.staffOnly),
   );
 
   fullName = computed(() => {
@@ -38,8 +37,8 @@ export class SidebarComponent {
       librarian: 'Bibliotekarz',
       reader: 'Czytelnik',
     };
-    return role ? labels[role] ?? role : '';
+    return role ? (labels[role] ?? role) : '';
   });
 
-  constructor(private auth: AuthService) { }
+  constructor(private auth: AuthService) {}
 }

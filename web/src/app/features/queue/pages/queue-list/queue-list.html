@@ -1,1 +1,104 @@
-<p>queue-list works!</p>
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Rezerwacje</p>
+            <h1 class="text-3xl text-slate-900">Kolejka książek</h1>
+            <p class="page-subtitle mt-2">{{ count() }} pozycji w kolejce {{ isStaff() ? 'całej biblioteki' : 'Twojego
+                konta' }}.</p>
+        </div>
+        <a routerLink="/catalog" class="accent-button">Nowa rezerwacja</a>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+        @for (filter of filters; track filter.value) {
+        <button (click)="setFilter(filter.value)" class="px-4 py-2.5 rounded-full text-sm transition-colors border
+			{{ activeFilter === filter.value
+				? 'bg-slate-900 text-white border-slate-900'
+				: 'bg-white/80 text-slate-600 border-slate-200 hover:bg-white' }}">
+            {{ filter.label }}
+        </button>
+        }
+    </div>
+
+    @if (error()) {
+    <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-2xl">
+        {{ error() }}
+    </div>
+    }
+
+    @if (loading()) {
+    <div class="panel-card p-8 text-center text-slate-500">Ładowanie kolejki rezerwacji...</div>
+    }
+
+    @if (!loading()) {
+    <div class="panel-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                        <th class="px-6 py-3 text-left">Książka</th>
+                        @if (isStaff()) {
+                        <th class="px-6 py-3 text-left">Czytelnik</th>
+                        }
+                        <th class="px-6 py-3 text-left">Data rezerwacji</th>
+                        <th class="px-6 py-3 text-left">Ważna do</th>
+                        <th class="px-6 py-3 text-left">Pozycja</th>
+                        <th class="px-6 py-3 text-left">Gotowość</th>
+                        <th class="px-6 py-3 text-left">Status</th>
+                        <th class="px-6 py-3 text-left">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (reservation of reservations(); track reservation.id) {
+                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <a [routerLink]="['/catalog', reservation.book]"
+                                class="font-medium text-slate-800 hover:text-orange-700">
+                                {{ reservation.book_title }}
+                            </a>
+                        </td>
+                        @if (isStaff()) {
+                        <td class="px-6 py-4 text-slate-600">{{ reservation.user_name }}</td>
+                        }
+                        <td class="px-6 py-4 text-slate-500">{{ reservation.reservation_date }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ reservation.expiry_date }}</td>
+                        <td class="px-6 py-4 text-slate-700 font-medium">{{ reservation.queue_position || '—' }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ reservation.estimated_ready_date ?? '—' }}</td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(reservation.status) }}">
+                                {{ getStatusLabel(reservation.status) }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex gap-3 flex-wrap">
+                                @if (reservation.status === 'pending') {
+                                <button type="button" class="text-xs text-rose-600 hover:text-rose-800 underline"
+                                    (click)="cancelReservation(reservation.id)">
+                                    Anuluj
+                                </button>
+                                }
+                                @if (isStaff() && reservation.status === 'pending') {
+                                <button type="button" class="text-xs text-emerald-600 hover:text-emerald-800 underline"
+                                    (click)="fulfillReservation(reservation.id)">
+                                    Zrealizuj
+                                </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    }
+
+                    @empty {
+                    <tr>
+                        <td [attr.colspan]="isStaff() ? 8 : 7" class="px-6 py-16 text-center text-slate-400 text-sm">
+                            Brak rezerwacji. Wybierz książkę z katalogu i dodaj ją do kolejki.
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+</div>

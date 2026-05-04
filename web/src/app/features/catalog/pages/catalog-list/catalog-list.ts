@@ -1,11 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Book } from '../../../../core/models/book';
 import { ApiService } from '../../../../core/services/api.service';
 
 @Component({
   selector: 'app-catalog-list',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './catalog-list.html',
 })
 export class CatalogList implements OnInit {
@@ -15,7 +16,7 @@ export class CatalogList implements OnInit {
   error = signal<string | null>(null);
   count = signal(0);
 
-  constructor(private api: ApiService) { }
+  constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.loadBooks();
@@ -37,7 +38,7 @@ export class CatalogList implements OnInit {
       error: () => {
         this.error.set('Nie udało się załadować książek.');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -45,8 +46,32 @@ export class CatalogList implements OnInit {
     this.loadBooks();
   }
 
+  getPrimaryAuthor(book: Book): string {
+    if (!book.authors.length) {
+      return 'Autor nieznany';
+    }
+
+    return book.authors.map((author) => `${author.first_name} ${author.last_name}`).join(', ');
+  }
+
+  getPrimaryCategory(book: Book): string {
+    return book.categories.length ? book.categories[0].name : '—';
+  }
+
+  getPublisherName(book: Book): string {
+    return book.publisher_name ?? '—';
+  }
+
+  getWaitLabel(book: Book): string {
+    return book.estimated_wait_days > 0 ? `${book.estimated_wait_days} dni` : 'Od ręki';
+  }
+
   getAvailableCopies(book: Book): number {
-    return book.copies.filter(c => c.available).length;
+    return book.available_copies;
+  }
+
+  getTotalCopies(book: Book): number {
+    return book.copies_count;
   }
 
   getStatus(book: Book): 'available' | 'unavailable' {

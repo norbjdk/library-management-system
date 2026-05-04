@@ -1,5 +1,5 @@
 from django.urls import include, path
-from library.auth_views import LoginView, MeView, RefreshView
+from library.auth_views import LoginView, MeView, RefreshView, RegisterView
 from library.views import (
     ApiRootView,
     AuthorViewSet,
@@ -39,6 +39,7 @@ operations_router.register(
 urlpatterns = [
     path("", ApiRootView.as_view(), name="api-root"),
     path("auth/login/", LoginView.as_view(), name="auth-login"),
+    path("auth/register/", RegisterView.as_view(), name="auth-register"),
     path("auth/refresh/", RefreshView.as_view(), name="auth-refresh"),
     path("auth/me/", MeView.as_view(), name="auth-me"),
     path("profile/", CurrentUserView.as_view(), name="profile"),
