@@ -1,0 +1,28 @@
+<nav class="bg-slate-800 text-white px-6 py-4 flex items-center justify-between shadow-lg">
+    <div class="flex items-center gap-2">
+        <span class="text-2xl">📖</span>
+        <span class="text-xl font-bold tracking-wide">LibraryMS</span>
+    </div>
+
+    <ul class="flex items-center gap-1">
+        @for (item of navItems; track item.path) {
+        <li>
+            <a [routerLink]="item.path" routerLinkActive="bg-slate-600"
+                class="flex items-center gap-1 px-3 py-2 rounded-md text-sm hover:bg-slate-700 transition-colors">
+                <span>{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+            </a>
+        </li>
+        }
+    </ul>
+
+    <div class="flex items-center gap-3">
+        <div class="text-right">
+            <p class="text-sm font-medium">{{ fullName() }}</p>
+            <p class="text-xs text-slate-400">{{ role() }}</p>
+        </div>
+        <button (click)="logout()" class="bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-md text-sm transition-colors">
+            Wyloguj
+        </button>
+    </div>
+</nav>

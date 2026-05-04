@@ -1,0 +1,113 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Katalog książek</h1>
+      <p class="text-sm text-slate-500 mt-1">{{ count() }} pozycji</p>
+    </div>
+    <button class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+      + Dodaj książkę
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="relative flex gap-2">
+    <div class="relative flex-1">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+      <input type="text" placeholder="Szukaj po tytule, autorze, kategorii..." [(ngModel)]="searchQuery"
+        (keyup.enter)="onSearch()"
+        class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white" />
+    </div>
+    <button (click)="onSearch()"
+      class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg text-sm transition-colors">
+      Szukaj
+    </button>
+  </div>
+
+  <!-- Error -->
+  @if (error()) {
+  <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+    {{ error() }}
+  </div>
+  }
+
+  <!-- Loading -->
+  @if (loading()) {
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    @for (i of [1,2,3,4,5,6]; track i) {
+    <div class="bg-white rounded-xl border border-slate-200 p-5 animate-pulse">
+      <div class="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+      <div class="h-3 bg-slate-200 rounded w-1/2 mb-4"></div>
+      <div class="space-y-2">
+        <div class="h-3 bg-slate-200 rounded"></div>
+        <div class="h-3 bg-slate-200 rounded"></div>
+        <div class="h-3 bg-slate-200 rounded"></div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Grid -->
+  @if (!loading()) {
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    @for (book of books(); track book.id) {
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <h3 class="font-semibold text-slate-800 leading-tight">{{ book.title }}</h3>
+          <p class="text-sm text-slate-500 mt-0.5">
+            {{ book.authors[0]?.first_name }} {{ book.authors[0]?.last_name }}
+          </p>
+        </div>
+        <span class="shrink-0 text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(book) }}">
+          {{ getStatusLabel(book) }}
+        </span>
+      </div>
+
+      <div class="space-y-1.5 text-xs text-slate-500">
+        <div class="flex justify-between">
+          <span>Kategoria</span>
+          <span class="font-medium text-slate-700">{{ book.categories[0]?.name ?? '—' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Wydawca</span>
+          <span class="font-medium text-slate-700">{{ book.publisher.name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Lokalizacja</span>
+          <span class="font-medium text-slate-700">{{ book.copies[0]?.location?.shelf ?? '—' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Dostępne egz.</span>
+          <span class="font-medium text-slate-700">{{ getAvailableCopies(book) }} / {{ book.copies.length }}</span>
+        </div>
+      </div>
+
+      <div class="mt-4 flex gap-2">
+        <button class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs py-2 rounded-lg transition-colors">
+          Szczegóły
+        </button>
+        @if (getStatus(book) === 'available') {
+        <button class="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-2 rounded-lg transition-colors">
+          Wypożycz
+        </button>
+        }
+        @if (getStatus(book) === 'unavailable') {
+        <button class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-2 rounded-lg transition-colors">
+          Zarezerwuj
+        </button>
+        }
+      </div>
+    </div>
+    }
+
+    @empty {
+    <div class="col-span-3 text-center py-16 text-slate-400">
+      <p class="text-4xl mb-3">📚</p>
+      <p class="text-sm">Nie znaleziono książek</p>
+    </div>
+    }
+  </div>
+  }
+</div>
