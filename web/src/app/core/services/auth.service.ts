@@ -62,12 +62,33 @@ export class AuthService {
             );
     }
 
+    // private restoreSession(): void {
+    //     const token = localStorage.getItem('access_token');
+    //     const user = localStorage.getItem('user');
+    //     if (token && user) {
+    //         this._accessToken.set(token);
+    //         this._user.set(JSON.parse(user));
+    //     }
+    // }
+
     private restoreSession(): void {
         const token = localStorage.getItem('access_token');
         const user = localStorage.getItem('user');
         if (token && user) {
             this._accessToken.set(token);
             this._user.set(JSON.parse(user));
+        }
+
+        // TYMCZASOWO - usuń jak backend będzie działał
+        if (!this._user()) {
+            this._user.set({
+                id: 1,
+                email: 'admin@biblioteka.pl',
+                first_name: 'Jan',
+                last_name: 'Kowalski',
+                role: 'admin',
+                is_staff: true,
+            });
         }
     }
 }
