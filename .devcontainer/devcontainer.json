@@ -1,65 +1,53 @@
 {
-    "name": "ProjektZespolowy Monolith",
-    "dockerComposeFile": [
-        "../docker-compose.yml",
-        "docker-compose.yml"
-    ],
-    "service": "backend",
-    "workspaceFolder": "/workspace",
-    "runServices": [
-        "db",
-        "backend",
-        "frontend"
-    ],
-    "shutdownAction": "stopCompose",
-    "overrideCommand": false,
-    "features": {
-        "ghcr.io/devcontainers/features/node:1": {
-            "version": "lts"
-        }
+  "name": "ProjektZespolowy Monolith",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "service": "backend",
+  "workspaceFolder": "/workspace",
+  "runServices": ["db", "backend", "web"],
+  "shutdownAction": "stopCompose",
+  "overrideCommand": false,
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+  "forwardPorts": [8000, 4200],
+  "portsAttributes": {
+    "8000": {
+      "label": "Django API",
+      "onAutoForward": "notify"
     },
-    "forwardPorts": [
-        8000,
-        4200
-    ],
-    "portsAttributes": {
-        "8000": {
-            "label": "Django API",
-            "onAutoForward": "notify"
-        },
-        "4200": {
-            "label": "Frontend",
-            "onAutoForward": "notify"
-        }
-    },
-    "customizations": {
-        "vscode": {
-            "settings": {
-                "git.path": "/usr/bin/git",
-                "python.defaultInterpreterPath": "/usr/local/bin/python",
-                "python.analysis.extraPaths": [
-                    "/workspace/backend"
-                ],
-                "python.terminal.activateEnvironment": false,
-                "editor.formatOnSave": true
-            },
-            "extensions": [
-                "ms-azuretools.vscode-containers",
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "ms-python.black-formatter",
-                "ms-python.isort",
-                "humao.rest-client",
-                "davidanson.vscode-markdownlint",
-                "redhat.vscode-yaml",
-                "angular.ng-template",
-                "ms-azuretools.vscode-docker",
-                "esbenp.prettier-vscode",
-                "SeyyedKhandon.firacode",
-                "christian-kohler.npm-intellisense",
-                "mechatroner.rainbow-csv"
-            ]
-        }
-    },
-    "postCreateCommand": "cd /workspace/backend && python manage.py check"
+    "4200": {
+      "label": "Web app",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "git.path": "/usr/bin/git",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.extraPaths": ["/workspace/backend"],
+        "python.terminal.activateEnvironment": false,
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "ms-azuretools.vscode-containers",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "humao.rest-client",
+        "davidanson.vscode-markdownlint",
+        "redhat.vscode-yaml",
+        "angular.ng-template",
+        "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode",
+        "SeyyedKhandon.firacode",
+        "christian-kohler.npm-intellisense",
+        "mechatroner.rainbow-csv"
+      ]
+    }
+  },
+  "postCreateCommand": "cd /workspace/backend && python manage.py check"
 }

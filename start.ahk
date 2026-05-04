@@ -11,8 +11,8 @@ global ProjectName := GetPathLeafName(ProjectPath)
 global ComposeCommand := DetectComposeCommand()
 global DevcontainerProjectName := "projektzespolowy-devcontainer"
 global TitleLogs := ProjectName . " - backend logs"
-global TitleCLI := ProjectName . " - frontend"
-global FrontendUrl := "http://localhost:4200/"
+global TitleWeb := ProjectName . " - web"
+global WebUrl := "http://localhost:4200/"
 
 if (ComposeCommand = "") {
     MsgBox("Nie znaleziono docker compose.`nZainstaluj Docker Desktop i upewnij sie, ze CLI jest dostepne w PATH.", ProjectName)
@@ -43,7 +43,7 @@ BuildDevcontainerComposeCommand() {
 }
 
 LaunchLogsTerminal() {
-    global ProjectPath, TitleLogs, FrontendUrl
+    global ProjectPath, TitleLogs, WebUrl
 
     devComposeCommand := BuildDevcontainerComposeCommand()
 
@@ -54,21 +54,24 @@ LaunchLogsTerminal() {
     powershellScript .= "Write-Host " . QuotePs("[1/3] Zatrzymywanie starego stacka") . "; "
     powershellScript .= "Invoke-Expression ($compose + ' down --remove-orphans'); "
     powershellScript .= "Write-Host " . QuotePs("[2/3] Budowanie i start kontenerow") . "; "
-    powershellScript .= "Invoke-Expression ($compose + ' up --build --remove-orphans -d db backend frontend'); "
-    powershellScript .= "Write-Host " . QuotePs("[3/3] Backendowe logi") . "; "
-    powershellScript .= "Invoke-Expression ($compose + ' logs --tail=100 db backend frontend'); "
+    powershellScript .= "Invoke-Expression ($compose + ' up --build --remove-orphans -d db backend web'); "
+    powershellScript .= "Write-Host " . QuotePs("[3/3] Logi backend i web") . "; "
+    powershellScript .= "Invoke-Expression ($compose + ' logs --tail=100 db backend web'); "
     powershellScript .= "$deadline = (Get-Date).AddMinutes(5); "
     powershellScript .= "$ready = $false; "
     powershellScript .= "while ((Get-Date) -lt $deadline) { "
-    powershellScript .= "try { Invoke-Expression ($compose + ' exec -T backend python manage.py check') *> $null } catch { } "
-    powershellScript .= "if ($LASTEXITCODE -eq 0) { $ready = $true; break } "
+    powershellScript .= "$backendReady = $false; "
+    powershellScript .= "$webReady = $false; "
+    powershellScript .= "try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8000/api/health/' -TimeoutSec 5 | Out-Null; $backendReady = $true } catch { } "
+    powershellScript .= "try { Invoke-WebRequest -UseBasicParsing -Uri " . QuotePs(WebUrl) . " -TimeoutSec 5 | Out-Null; $webReady = $true } catch { } "
+    powershellScript .= "if ($backendReady -and $webReady) { $ready = $true; break } "
     powershellScript .= "Start-Sleep -Seconds 3; "
     powershellScript .= "} "
     powershellScript .= "Clear-Host; "
     powershellScript .= "if ($ready) { "
-    powershellScript .= "Write-Host " . QuotePs("Frontend: " . FrontendUrl) . "; "
+    powershellScript .= "Write-Host " . QuotePs("Web: " . WebUrl) . "; "
     powershellScript .= "} else { "
-    powershellScript .= "Write-Host " . QuotePs("Backend nie osiagnal gotowosci w ciagu 5 minut.") . "; "
+    powershellScript .= "Write-Host " . QuotePs("Backend lub web nie osiagnely gotowosci w ciagu 5 minut.") . "; "
     powershellScript .= "} "
     powershellScript .= "}"
 
@@ -76,10 +79,10 @@ LaunchLogsTerminal() {
 }
 
 LaunchCliTerminal() {
-    global TitleCLI
+    global TitleWeb
 
     powershellScript := "& { "
-    powershellScript .= "[Console]::Title = " . QuotePs(TitleCLI) . "; "
+    powershellScript .= "[Console]::Title = " . QuotePs(TitleWeb) . "; "
     powershellScript .= "Write-Host " . QuotePs("dkbuild") . "; "
     powershellScript .= "}"
 
@@ -91,7 +94,7 @@ QuotePs(value) {
 }
 
 ArrangeTerminalWindows() {
-    global TitleLogs, TitleCLI
+    global TitleLogs, TitleWeb
 
     terminalHeight := 360
     MonitorGetWorkArea(1, &left, &top, &right, &bottom)
@@ -105,7 +108,7 @@ ArrangeTerminalWindows() {
         WinMove(left, positionY, logsWidth, terminalHeight, logId)
     }
 
-    if (cliId := WinWait(TitleCLI, , 10)) {
+    if (cliId := WinWait(TitleWeb, , 10)) {
         WinActivate(cliId)
         WinMove(left + logsWidth, positionY, cliWidth, terminalHeight, cliId)
     }
@@ -117,45 +120,19 @@ OpenVSCode(projectPath) {
 
     if (vscInfo.exe != "") {
         try {
-            Run('"' . vscInfo.exe . '" --new-window "' . projectPath . '"', , "Hide", &pid)
+            Run('"' . vscInfo.exe . '" --new-window "' . projectPath . '"')
         } catch {
             MsgBox("Nie udalo sie uruchomic Visual Studio Code.", projectName)
-            return
         }
-
-        if !HasDevContainersExtension() {
-            MsgBox("Brakuje rozszerzenia Dev Containers w VS Code. Zainstaluj je i uruchom skrypt ponownie.", projectName)
-            return
-        }
-
-        if (windowId := WaitForVSCodeWindow(pid, projectName, vscInfo.exe)) {
-            ReopenVSCodeInContainer(windowId, projectName)
-            return
-        }
-
-        MsgBox("VS Code uruchomil sie, ale nie udalo sie automatycznie wyslac polecenia Dev Containers.", projectName)
         return
     }
 
     if (vscInfo.cli != "") {
         try {
-            Run('"' . vscInfo.cli . '" --new-window "' . projectPath . '"', , "Hide")
+            Run('"' . vscInfo.cli . '" --new-window "' . projectPath . '"')
         } catch {
             MsgBox("Nie udalo sie uruchomic Visual Studio Code.", projectName)
-            return
         }
-
-        if !HasDevContainersExtension() {
-            MsgBox("Brakuje rozszerzenia Dev Containers w VS Code. Zainstaluj je i uruchom skrypt ponownie.", projectName)
-            return
-        }
-
-        if (windowId := WaitForVSCodeWindow(0, projectName, "Code.exe")) {
-            ReopenVSCodeInContainer(windowId, projectName)
-            return
-        }
-
-        MsgBox("VS Code uruchomil sie, ale nie udalo sie automatycznie wyslac polecenia Dev Containers.", projectName)
         return
     }
 
@@ -333,15 +310,15 @@ BuildCommandLine(commands*) {
 }
 
 RunCliCommand(commandLine) {
-    global TitleCLI
+    global TitleWeb
 
-    if !WinExist(TitleCLI) {
-        MsgBox("Nie znaleziono terminala CLI. Uruchom skrypt ponownie.", TitleCLI)
+    if !WinExist(TitleWeb) {
+        MsgBox("Nie znaleziono terminala CLI. Uruchom skrypt ponownie.", TitleWeb)
         return
     }
 
-    WinActivate(TitleCLI)
-    WinWaitActive(TitleCLI, , 2)
+    WinActivate(TitleWeb)
+    WinWaitActive(TitleWeb, , 2)
     SendText(commandLine)
     Send("{Enter}")
 }
@@ -374,14 +351,14 @@ BuildActionStandard(guiObj) {
     guiObj.Destroy()
     RunCliCommand(ComposeCommand . " down --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
         " down --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
-        " up --build --remove-orphans -d db backend frontend } }")
+        " up --build --remove-orphans -d db backend web } }")
 }
 
 BuildActionRestart(guiObj) {
     devComposeCommand := BuildDevcontainerComposeCommand()
 
     guiObj.Destroy()
-    RunCliCommand(devComposeCommand . " restart db backend frontend")
+    RunCliCommand(devComposeCommand . " restart db backend web")
 }
 
 BuildActionResetDatabase(guiObj) {
@@ -396,10 +373,10 @@ BuildActionResetDatabase(guiObj) {
 
     RunCliCommand(ComposeCommand . " down -v --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
         " down -v --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
-        " up --build --remove-orphans -d db backend frontend } }")
+        " up --build --remove-orphans -d db backend web } }")
 }
 
-#HotIf WinActive(TitleCLI)
+#HotIf WinActive(TitleWeb)
 
 ::dkbuild::
 {
