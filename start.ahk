@@ -43,7 +43,7 @@ BuildDevcontainerComposeCommand() {
 }
 
 LaunchLogsTerminal() {
-    global ProjectPath, TitleLogs, WebUrl
+    global ProjectPath, TitleLogs, WebUrl, ComposeCommand
 
     devComposeCommand := BuildDevcontainerComposeCommand()
 
@@ -52,6 +52,7 @@ LaunchLogsTerminal() {
     powershellScript .= "Set-Location " . QuotePs(ProjectPath) . "; "
     powershellScript .= "$compose = " . QuotePs(devComposeCommand) . "; "
     powershellScript .= "Write-Host " . QuotePs("[1/3] Zatrzymywanie starego stacka") . "; "
+    powershellScript .= "Invoke-Expression ('" . ComposeCommand . " down --remove-orphans'); "
     powershellScript .= "Invoke-Expression ($compose + ' down --remove-orphans'); "
     powershellScript .= "Write-Host " . QuotePs("[2/3] Budowanie i start kontenerow") . "; "
     powershellScript .= "Invoke-Expression ($compose + ' up --build --remove-orphans -d db backend web'); "
@@ -349,9 +350,9 @@ BuildActionStandard(guiObj) {
     devComposeCommand := BuildDevcontainerComposeCommand()
 
     guiObj.Destroy()
-    RunCliCommand(ComposeCommand . " down --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
+    RunCliCommand(ComposeCommand . " down --remove-orphans; " . devComposeCommand .
         " down --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
-        " up --build --remove-orphans -d db backend web } }")
+        " up --build --remove-orphans -d db backend web }")
 }
 
 BuildActionRestart(guiObj) {
@@ -371,9 +372,9 @@ BuildActionResetDatabase(guiObj) {
     if (MsgBox("Usunac baze danych i przebudowac srodowisko od zera?", ProjectName, "YesNo") != "Yes")
         return
 
-    RunCliCommand(ComposeCommand . " down -v --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
+    RunCliCommand(ComposeCommand . " down -v --remove-orphans; " . devComposeCommand .
         " down -v --remove-orphans; if ($LASTEXITCODE -eq 0) { " . devComposeCommand .
-        " up --build --remove-orphans -d db backend web } }")
+        " up --build --remove-orphans -d db backend web }")
 }
 
 #HotIf WinActive(TitleWeb)

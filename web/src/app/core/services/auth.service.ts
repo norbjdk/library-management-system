@@ -9,6 +9,7 @@ import { AuthResponse, RegisterPayload, User } from '../models/user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private base = environment.apiUrl;
+  private restorePromise: Promise<void> = Promise.resolve();
 
   private _user = signal<User | null>(null);
   private _accessToken = signal<string | null>(null);
@@ -42,8 +43,12 @@ export class AuthService {
     localStorage.removeItem('user');
 
     if (navigate) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login'], { replaceUrl: true });
     }
+  }
+
+  whenReady(): Promise<void> {
+    return this.restorePromise;
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
@@ -90,6 +95,7 @@ export class AuthService {
   private restoreSession(): void {
     const token = localStorage.getItem('access_token');
     if (!token) {
+      this.restorePromise = Promise.resolve();
       return;
     }
 
@@ -104,14 +110,18 @@ export class AuthService {
       }
     }
 
-    this.http.get<User>(`${this.base}/auth/me/`).subscribe({
-      next: (profile) => {
-        this._user.set(profile);
-        localStorage.setItem('user', JSON.stringify(profile));
-      },
-      error: () => {
-        this.clearSession(this.router.url !== '/login');
-      },
+    this.restorePromise = new Promise((resolve) => {
+      this.http.get<User>(`${this.base}/auth/me/`).subscribe({
+        next: (profile) => {
+          this._user.set(profile);
+          localStorage.setItem('user', JSON.stringify(profile));
+          resolve();
+        },
+        error: () => {
+          this.clearSession(this.router.url !== '/login');
+          resolve();
+        },
+      });
     });
   }
 }

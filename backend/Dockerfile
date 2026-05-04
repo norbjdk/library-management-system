@@ -18,7 +18,7 @@ COPY --from=uv_source /uv /bin/uv
 
 COPY requirements.txt ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --no-cache -r requirements.txt
+    uv pip install --system --upgrade -r requirements.txt
 
 COPY . .
 

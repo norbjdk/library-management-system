@@ -1,39 +1,5 @@
-<div class="auth-stage items-stretch">
-    <section class="auth-hero flex flex-col justify-between gap-8">
-        <div class="space-y-5">
-            <p class="page-kicker">System biblioteczny</p>
-            <div>
-                <span class="text-5xl">📚</span>
-                <h1 class="mt-4 text-4xl text-slate-900">Jedno miejsce do katalogu, kolejki i obsługi czytelników.</h1>
-                <p class="page-subtitle mt-4 max-w-2xl text-base leading-7">
-                    Pracuj na aktualnych danych z backendu, pilnuj wypożyczeń i rezerwacji, a konto czytelnika utwórz
-                    bez wychodzenia z ekranu logowania.
-                </p>
-            </div>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-3">
-            <article class="metric-card">
-                <span class="muted-label">Katalog i lokalizacja</span>
-                <strong>API live</strong>
-                <p class="mt-2 text-sm text-slate-500">Widoki pracują na tych samych zasobach co backend biblioteki.</p>
-            </article>
-            <article class="metric-card">
-                <span class="muted-label">Czytelnicy</span>
-                <strong>Rejestracja</strong>
-                <p class="mt-2 text-sm text-slate-500">Nowe konto tworzy się od razu z aktywną sesją i profilem
-                    użytkownika.</p>
-            </article>
-            <article class="metric-card">
-                <span class="muted-label">Operacje</span>
-                <strong>Kolejka</strong>
-                <p class="mt-2 text-sm text-slate-500">Rezerwacje, terminy gotowości i powiadomienia są spięte z jednym
-                    przepływem.</p>
-            </article>
-        </div>
-    </section>
-
-    <section class="panel-card p-8 md:p-10 flex flex-col justify-center w-full max-w-xl mx-auto">
+<div class="auth-stage">
+    <section class="panel-card p-8 md:p-10 flex flex-col justify-center w-full max-w-xl">
         <div class="flex rounded-full bg-slate-100 p-1 mb-8">
             <button type="button" (click)="setMode('login')"
                 class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"

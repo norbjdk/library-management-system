@@ -3,13 +3,13 @@
     DESCRIPTION: Static data dump for testing purposes.
 */
 
-INSERT INTO users (firstName, lastName, email, birthdate, password, role)
+INSERT INTO users ("firstName", "lastName", email, birthdate, password, role, "createDate")
 VALUES
-    ('Admin', 'LMS', 'admin@library.com', '2000-05-15', 'passwd', 'admin'),
-    ('Anna', 'Czytelnik', 'reader@library.com', '1998-03-12', 'passwd', 'reader'),
-    ('Marta', 'Bibliotekarz', 'librarian@library.com', '1990-01-20', 'passwd', 'librarian');
+    ('Admin', 'LMS', 'admin@library.com', '2000-05-15', 'passwd', 'admin', CURRENT_TIMESTAMP),
+    ('Anna', 'Czytelnik', 'reader@library.com', '1998-03-12', 'passwd', 'reader', CURRENT_TIMESTAMP),
+    ('Marta', 'Bibliotekarz', 'librarian@library.com', '1990-01-20', 'passwd', 'librarian', CURRENT_TIMESTAMP);
 
-INSERT INTO authors (firstName, lastName, birthdate, nationality)
+INSERT INTO authors ("firstName", "lastName", birthdate, nationality)
 VALUES ('J.K.', 'Rowling', '1965-07-31', 'British');
 
 INSERT INTO publishers (name, city, country)
@@ -21,7 +21,7 @@ VALUES ('Fantasy', 'Literatura fantasy i science-fiction');
 INSERT INTO locations (shelf, section, floor)
 VALUES ('A1', 'Fantasy', 1);
 
-INSERT INTO books (title, ean, publishYear, description, publisher_id)
+INSERT INTO books (title, ean, "publishYear", description, publisher_id)
 VALUES ('Harry Potter i Kamień Filozoficzny', '111-11-1111-111-1', 1997, 'Harry dowiaduje się, że jest czarodziejem i trafia do Hogwartu.', 1);
 
 INSERT INTO book_authors (book_id, author_id)

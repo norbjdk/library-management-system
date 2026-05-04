@@ -45,7 +45,7 @@ export class Login {
 
     this.auth.login(this.email, this.password).subscribe({
       next: () => {
-        this.router.navigate(['/catalog']);
+        this.router.navigate(['/catalog'], { replaceUrl: true });
       },
       error: (err) => {
         this.error.set(err?.error?.detail ?? 'Nieprawidłowe dane logowania.');
@@ -81,7 +81,7 @@ export class Login {
       })
       .subscribe({
         next: () => {
-          this.router.navigate(['/catalog']);
+          this.router.navigate(['/catalog'], { replaceUrl: true });
         },
         error: (err) => {
           this.error.set(

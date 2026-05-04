@@ -1,9 +1,9 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /workspace/web
 
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm install
 
 COPY . .
 

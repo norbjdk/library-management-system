@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { Notification } from '../../../../core/models/notification';
+import { Notification, NotificationType } from '../../../../core/models/notification';
 import { ApiService } from '../../../../core/services/api.service';
 
 @Component({
@@ -20,7 +20,7 @@ export class NotificationsList implements OnInit {
     { label: 'Przeczytane', value: 'read' },
   ];
 
-  constructor(private api: ApiService) { }
+  constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.loadNotifications();
@@ -43,7 +43,7 @@ export class NotificationsList implements OnInit {
       error: () => {
         this.error.set('Nie udało się załadować powiadomień.');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -55,32 +55,36 @@ export class NotificationsList implements OnInit {
   markRead(id: number) {
     this.api.markNotificationRead(id).subscribe({
       next: () => this.loadNotifications(),
-      error: () => this.error.set('Nie udało się oznaczyć powiadomienia.')
+      error: () => this.error.set('Nie udało się oznaczyć powiadomienia.'),
     });
   }
 
   markAllRead() {
     this.api.markAllNotificationsRead().subscribe({
       next: () => this.loadNotifications(),
-      error: () => this.error.set('Nie udało się oznaczyć wszystkich powiadomień.')
+      error: () => this.error.set('Nie udało się oznaczyć wszystkich powiadomień.'),
     });
   }
 
   getTypeLabel(type: Notification['notification_type']): string {
-    const labels = {
+    const labels: Record<NotificationType, string> = {
+      loan_due: 'Termin',
       fine_issued: 'Kara',
       reservation_ready: 'Rezerwacja',
+      order_update: 'Zamówienie',
       system: 'System',
     };
-    return labels[type];
+    return labels[type] ?? type;
   }
 
   getTypeClasses(type: Notification['notification_type']): string {
-    const classes = {
+    const classes: Record<NotificationType, string> = {
+      loan_due: 'bg-amber-100 text-amber-700',
       fine_issued: 'bg-red-100 text-red-700',
       reservation_ready: 'bg-green-100 text-green-700',
+      order_update: 'bg-violet-100 text-violet-700',
       system: 'bg-blue-100 text-blue-700',
     };
-    return classes[type];
+    return classes[type] ?? 'bg-slate-100 text-slate-600';
   }
 }

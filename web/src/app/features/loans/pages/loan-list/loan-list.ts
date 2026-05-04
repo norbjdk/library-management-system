@@ -20,10 +20,9 @@ export class LoanList implements OnInit {
     { label: 'Aktywne', value: 'active' },
     { label: 'Przeterminowane', value: 'overdue' },
     { label: 'Zwrócone', value: 'returned' },
-    { label: 'Zarezerwowane', value: 'reserved' },
   ];
 
-  constructor(private api: ApiService) { }
+  constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.loadLoans();
@@ -45,7 +44,7 @@ export class LoanList implements OnInit {
       error: () => {
         this.error.set('Nie udało się załadować wypożyczeń.');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -57,26 +56,24 @@ export class LoanList implements OnInit {
   returnLoan(id: number) {
     this.api.returnLoan(id).subscribe({
       next: () => this.loadLoans(),
-      error: () => this.error.set('Nie udało się zwrócić książki.')
+      error: () => this.error.set('Nie udało się zwrócić książki.'),
     });
   }
 
   getStatusClasses(status: Loan['status']): string {
-    const classes = {
+    const classes: Record<Loan['status'], string> = {
       active: 'bg-green-100 text-green-700',
       overdue: 'bg-red-100 text-red-700',
       returned: 'bg-slate-100 text-slate-600',
-      reserved: 'bg-yellow-100 text-yellow-700',
     };
     return classes[status];
   }
 
   getStatusLabel(status: Loan['status']): string {
-    const labels = {
+    const labels: Record<Loan['status'], string> = {
       active: 'Aktywne',
       overdue: 'Przeterminowane',
       returned: 'Zwrócone',
-      reserved: 'Zarezerwowane',
     };
     return labels[status];
   }
