@@ -6,11 +6,6 @@
   "runServices": ["db", "backend", "web"],
   "shutdownAction": "stopCompose",
   "overrideCommand": false,
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
-    }
-  },
   "forwardPorts": [8000, 4200],
   "portsAttributes": {
     "8000": {
@@ -49,5 +44,5 @@
       ]
     }
   },
-  "postCreateCommand": "cd /workspace/backend && python manage.py check"
+  "postCreateCommand": "cd /workspace/backend && python manage.py check && cd /workspace/web && npm ci"
 }

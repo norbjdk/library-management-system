@@ -6,6 +6,12 @@ import { forkJoin } from 'rxjs';
 import { Book, BookAvailability, Copy } from '../../../../core/models/book';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import {
+  getTodayIsoDate,
+  hasText,
+  isValidIsoDate,
+  normalizeDateInput,
+} from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-book-detail',
@@ -75,8 +81,21 @@ export class BookDetail implements OnInit {
       return;
     }
 
-    if (!this.reservationExpiry) {
+    const reservationExpiry = normalizeDateInput(this.reservationExpiry);
+    this.reservationExpiry = reservationExpiry;
+
+    if (!hasText(reservationExpiry)) {
       this.error.set('Wybierz datę ważności rezerwacji.');
+      return;
+    }
+
+    if (!isValidIsoDate(reservationExpiry)) {
+      this.error.set('Wybierz poprawną datę ważności rezerwacji.');
+      return;
+    }
+
+    if (reservationExpiry < getTodayIsoDate()) {
+      this.error.set('Data ważności rezerwacji nie może być z przeszłości.');
       return;
     }
 
@@ -86,7 +105,7 @@ export class BookDetail implements OnInit {
     this.api
       .createReservation({
         book: currentBook.id,
-        expiry_date: this.reservationExpiry,
+        expiry_date: reservationExpiry,
       })
       .subscribe({
         next: () => {
@@ -97,6 +116,7 @@ export class BookDetail implements OnInit {
         error: (err) => {
           this.error.set(
             err?.error?.detail ??
+              err?.error?.expiry_date?.[0] ??
               err?.error?.non_field_errors?.[0] ??
               'Nie udało się utworzyć rezerwacji.',
           );

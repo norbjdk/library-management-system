@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Book } from '../../../../core/models/book';
 import { ApiService } from '../../../../core/services/api.service';
+import { normalizeText } from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-catalog-list',
@@ -28,7 +29,9 @@ export class CatalogList implements OnInit {
     this.error.set(null);
 
     const params: Record<string, string> = {};
-    if (this.searchQuery) params['q'] = this.searchQuery;
+    const searchQuery = normalizeText(this.searchQuery);
+    this.searchQuery = searchQuery;
+    if (searchQuery) params['q'] = searchQuery;
 
     this.api.getBooks(params).subscribe({
       next: (response) => {

@@ -375,6 +375,38 @@ class LoanViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(loan).data)
 
     @action(detail=True, methods=["post"])
+    def extend(self, request, pk=None):
+        loan = self.get_object()
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą przedłużać wypożyczenia."
+            )
+
+        raw_extension_days = request.data.get("extension_days", 7)
+        try:
+            extension_days = int(raw_extension_days)
+        except (TypeError, ValueError) as error:
+            raise ValidationError(
+                {"extension_days": "Liczba dni przedłużenia musi być liczbą całkowitą."}
+            ) from error
+
+        if extension_days <= 0:
+            raise ValidationError(
+                {"extension_days": "Liczba dni przedłużenia musi być dodatnia."}
+            )
+
+        if loan.return_date is not None or loan.status == LoanStatus.RETURNED:
+            raise ValidationError(
+                {
+                    "status": "Nie można przedłużyć wypożyczenia, które zostało już zwrócone."
+                }
+            )
+
+        loan.extend_due_date(extension_days)
+        return Response(self.get_serializer(loan).data)
+
+    @action(detail=True, methods=["post"])
     def mark_overdue(self, request, pk=None):
         loan = self.get_object()
         user = getattr(request, "user", None)

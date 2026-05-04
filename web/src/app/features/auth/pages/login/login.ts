@@ -2,6 +2,15 @@ import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
+import {
+  getTodayIsoDate,
+  hasText,
+  isValidEmail,
+  isValidIsoDate,
+  normalizeDateInput,
+  normalizeEmail,
+  normalizeText,
+} from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-login',
@@ -41,15 +50,23 @@ export class Login {
   }
 
   onSubmit() {
-    if (!this.email || !this.password) {
+    const email = normalizeEmail(this.email);
+    this.email = email;
+
+    if (!hasText(email) || !this.password.trim()) {
       this.error.set('Podaj email i hasło.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      this.error.set('Podaj poprawny adres email.');
       return;
     }
 
     this.loading.set(true);
     this.error.set(null);
 
-    this.auth.login(this.email, this.password).subscribe({
+    this.auth.login(email, this.password).subscribe({
       next: () => {
         this.router.navigateByUrl(this.resolvePostAuthRedirect(), { replaceUrl: true });
       },
@@ -61,11 +78,40 @@ export class Login {
   }
 
   onRegister() {
-    const { first_name, last_name, email, birthdate, password, confirmPassword } =
-      this.registration;
+    const first_name = normalizeText(this.registration.first_name);
+    const last_name = normalizeText(this.registration.last_name);
+    const email = normalizeEmail(this.registration.email);
+    const birthdate = normalizeDateInput(this.registration.birthdate);
+    const password = this.registration.password;
+    const confirmPassword = this.registration.confirmPassword;
 
-    if (!first_name || !last_name || !email || !birthdate || !password || !confirmPassword) {
+    this.registration = {
+      ...this.registration,
+      first_name,
+      last_name,
+      email,
+      birthdate,
+    };
+
+    if (
+      !hasText(first_name) ||
+      !hasText(last_name) ||
+      !hasText(email) ||
+      !hasText(birthdate) ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
       this.error.set('Uzupełnij wszystkie pola rejestracji.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      this.error.set('Podaj poprawny adres email.');
+      return;
+    }
+
+    if (!isValidIsoDate(birthdate) || birthdate > getTodayIsoDate()) {
+      this.error.set('Wybierz poprawną datę urodzenia.');
       return;
     }
 

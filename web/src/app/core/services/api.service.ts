@@ -35,7 +35,7 @@ export class ApiService {
     return new HttpParams({ fromObject: params ?? {} });
   }
 
-    getBooks(params?: Record<string, string>): Observable<PaginatedResponse<Book>> {
+  getBooks(params?: Record<string, string>): Observable<PaginatedResponse<Book>> {
     return this.http
       .get<PaginatedResponse<Book> | Book[]>(`${this.base}/catalog/books/`, {
         params: this.buildParams(params),
@@ -77,6 +77,12 @@ export class ApiService {
 
   returnLoan(id: number): Observable<Loan> {
     return this.http.post<Loan>(`${this.base}/loans/${id}/return_loan/`, {});
+  }
+
+  extendLoan(id: number, extensionDays = 7): Observable<Loan> {
+    return this.http.post<Loan>(`${this.base}/loans/${id}/extend/`, {
+      extension_days: extensionDays,
+    });
   }
 
   getReservations(params?: Record<string, string>): Observable<PaginatedResponse<Reservation>> {

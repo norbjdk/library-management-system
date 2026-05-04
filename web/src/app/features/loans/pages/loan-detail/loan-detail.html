@@ -15,6 +15,10 @@
     <app-alert tone="danger" title="Błąd szczegółów" [message]="error() ?? ''" />
     }
 
+    @if (success()) {
+    <app-alert tone="success" title="Operacja zakończona" [message]="success() ?? ''" />
+    }
+
     @if (loading()) {
     <div class="panel-card loan-detail-loading">
         <app-spinner label="Ładowanie szczegółów wypożyczenia..." size="lg" />
@@ -75,9 +79,17 @@
                 </p>
             </div>
 
+            @if (canExtend()) {
+            <app-button label="Przedłuż o 7 dni" tone="secondary" [busy]="extending()" [fullWidth]="true"
+                (pressed)="extendLoanByWeek()" />
+            }
+
             @if (canReturn()) {
             <app-button label="Zaksięguj zwrot" tone="primary" [busy]="returning()" [fullWidth]="true"
                 (pressed)="openReturnModal()" />
+            } @else if (showReadOnlyNotice()) {
+            <app-alert tone="info" title="Tryb tylko do odczytu"
+                message="Czytelnik może przejrzeć szczegóły wypożyczenia, ale nie może go rozliczyć ani przedłużyć." />
             } @else {
             <app-alert tone="success" title="Zwrot zakończony" message="To wypożyczenie zostało już rozliczone." />
             }

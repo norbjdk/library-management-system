@@ -3,7 +3,7 @@ FROM node:22-bookworm-slim
 WORKDIR /workspace/web
 
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm install
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 

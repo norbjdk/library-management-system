@@ -1,5 +1,4 @@
 <div class="space-y-6">
-    <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-slate-800">Kary</h1>
@@ -7,7 +6,6 @@
         </div>
     </div>
 
-    <!-- Filtry -->
     <div class="flex gap-2 flex-wrap">
         @for (filter of filters; track filter.value) {
         <button (click)="setFilter(filter.value)" class="px-3 py-2 rounded-lg text-sm transition-colors border
@@ -19,21 +17,18 @@
         }
     </div>
 
-    <!-- Error -->
     @if (error()) {
     <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
         {{ error() }}
     </div>
     }
 
-    <!-- Loading -->
     @if (loading()) {
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
         <p class="text-slate-400 text-sm animate-pulse">Ładowanie kar...</p>
     </div>
     }
 
-    <!-- Tabela -->
     @if (!loading()) {
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
         <table class="w-full text-sm">

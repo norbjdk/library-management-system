@@ -96,6 +96,60 @@ class CirculationApiTests(LibraryAPITestCase):
             ).exists()
         )
 
+    def test_staff_can_extend_active_loan(self):
+        loan = Loan.objects.create(
+            copy=self.available_copy,
+            user=self.reader,
+            loan_date=self.today - timedelta(days=1),
+            due_date=self.today + timedelta(days=4),
+            status=LoanStatus.ACTIVE,
+        )
+        loan.copy.mark_unavailable()
+
+        response = self.authenticated_client(self.staff).post(
+            reverse("loan-extend", args=[loan.id]),
+            {"extension_days": 10},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        loan.refresh_from_db()
+        self.assertEqual(loan.due_date, self.today + timedelta(days=14))
+        self.assertEqual(loan.status, LoanStatus.ACTIVE)
+
+    def test_extending_overdue_loan_uses_today_as_baseline(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("loan-extend", args=[self.loan.id]),
+            {"extension_days": 5},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.due_date, self.today + timedelta(days=5))
+        self.assertEqual(self.loan.status, LoanStatus.ACTIVE)
+
+    def test_cannot_extend_returned_loan(self):
+        self.loan.return_copy()
+
+        response = self.authenticated_client(self.staff).post(
+            reverse("loan-extend", args=[self.loan.id]),
+            {"extension_days": 3},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("status", response.data)
+
+    def test_reader_cannot_extend_loan(self):
+        response = self.authenticated_client(self.reader).post(
+            reverse("loan-extend", args=[self.loan.id]),
+            {"extension_days": 3},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_reservation_queue_positions_and_ready_dates(self):
         response = self.authenticated_client(self.staff).get(
             reverse("reservation-list")

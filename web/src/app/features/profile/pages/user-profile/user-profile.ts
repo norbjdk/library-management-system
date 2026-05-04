@@ -4,6 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { UserProfile } from '../../../../core/models/user';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import {
+  getTodayIsoDate,
+  hasText,
+  isValidEmail,
+  isValidIsoDate,
+  normalizeDateInput,
+  normalizeEmail,
+  normalizeText,
+} from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-user-profile',
@@ -59,8 +68,30 @@ export class UserProfileComponent implements OnInit {
   }
 
   saveProfile() {
-    if (!this.form.first_name || !this.form.last_name || !this.form.email || !this.form.birthdate) {
+    const first_name = normalizeText(this.form.first_name);
+    const last_name = normalizeText(this.form.last_name);
+    const email = normalizeEmail(this.form.email);
+    const birthdate = normalizeDateInput(this.form.birthdate);
+
+    this.form = {
+      first_name,
+      last_name,
+      email,
+      birthdate,
+    };
+
+    if (!hasText(first_name) || !hasText(last_name) || !hasText(email) || !hasText(birthdate)) {
       this.error.set('Wszystkie pola profilu są wymagane.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      this.error.set('Podaj poprawny adres email.');
+      return;
+    }
+
+    if (!isValidIsoDate(birthdate) || birthdate > getTodayIsoDate()) {
+      this.error.set('Podaj poprawną datę urodzenia.');
       return;
     }
 

@@ -375,6 +375,23 @@ class Loan(models.Model):
         self.copy.mark_available()
         self.save(update_fields=["return_date", "status"])
 
+    def extend_due_date(self, extension_days: int, as_of: date | None = None) -> None:
+        if self.return_date is not None or self.status == LoanStatus.RETURNED:
+            raise ValueError("Tylko aktywne wypożyczenie można przedłużyć.")
+        if extension_days <= 0:
+            raise ValueError("Liczba dni przedłużenia musi być dodatnia.")
+
+        reference_date = as_of or timezone.localdate()
+        baseline_due_date = (
+            self.due_date if self.due_date >= reference_date else reference_date
+        )
+        self.due_date = baseline_due_date + timedelta(days=extension_days)
+        self.return_date = None
+        self.status = (
+            LoanStatus.OVERDUE if self.due_date < reference_date else LoanStatus.ACTIVE
+        )
+        self.save(update_fields=["due_date", "return_date", "status"])
+
     def refresh_status(self, as_of: date | None = None) -> None:
         reference_date = as_of or timezone.localdate()
         if self.return_date is not None:

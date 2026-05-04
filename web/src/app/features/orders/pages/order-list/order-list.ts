@@ -3,6 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { Book } from '../../../../core/models/book';
 import { Order } from '../../../../core/models/order';
 import { ApiService } from '../../../../core/services/api.service';
+import {
+  hasText,
+  isPositiveInteger,
+  isValidIsoDate,
+  normalizeDateInput,
+  normalizeText,
+} from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-order-list',
@@ -86,8 +93,32 @@ export class OrderList implements OnInit {
   }
 
   createOrder() {
-    if (!this.orderForm.bookId) {
+    const bookId = normalizeText(this.orderForm.bookId);
+    const quantity = Number(this.orderForm.quantity);
+    const supplier = normalizeText(this.orderForm.supplier);
+    const expected_delivery_date = normalizeDateInput(this.orderForm.expected_delivery_date);
+    const notes = normalizeText(this.orderForm.notes);
+
+    this.orderForm = {
+      bookId,
+      quantity: Number.isFinite(quantity) ? quantity : this.orderForm.quantity,
+      supplier,
+      expected_delivery_date,
+      notes,
+    };
+
+    if (!hasText(bookId)) {
       this.error.set('Wybierz książkę do zamówienia.');
+      return;
+    }
+
+    if (!isPositiveInteger(quantity)) {
+      this.error.set('Ilość zamówienia musi być dodatnią liczbą całkowitą.');
+      return;
+    }
+
+    if (expected_delivery_date && !isValidIsoDate(expected_delivery_date)) {
+      this.error.set('Wybierz poprawną datę dostawy.');
       return;
     }
 
@@ -95,11 +126,11 @@ export class OrderList implements OnInit {
     this.error.set(null);
 
     const payload: Partial<Order> & { book: number } = {
-      book: Number(this.orderForm.bookId),
-      quantity: this.orderForm.quantity || 1,
-      supplier: this.orderForm.supplier.trim(),
-      notes: this.orderForm.notes.trim(),
-      expected_delivery_date: this.orderForm.expected_delivery_date || null,
+      book: Number(bookId),
+      quantity,
+      supplier,
+      notes,
+      expected_delivery_date: expected_delivery_date || null,
     };
 
     this.api.createOrder(payload).subscribe({
@@ -115,8 +146,10 @@ export class OrderList implements OnInit {
         this.showCreateForm.set(false);
         this.loadOrders();
       },
-      error: () => {
-        this.error.set('Nie udało się utworzyć zamówienia.');
+      error: (err) => {
+        this.error.set(
+          err?.error?.detail ?? err?.error?.quantity?.[0] ?? 'Nie udało się utworzyć zamówienia.',
+        );
         this.creating.set(false);
       },
     });
