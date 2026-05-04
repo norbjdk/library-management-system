@@ -1,11 +1,61 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
+import { Fine } from '../../../../core/models/fine';
+import { ApiService } from '../../../../core/services/api.service';
 
 @Component({
   selector: 'app-fines-list',
   imports: [],
   templateUrl: './fines-list.html',
-  styleUrl: './fines-list.css',
 })
-export class FinesList {
+export class FinesList implements OnInit {
+  activeFilter: 'all' | 'paid' | 'unpaid' = 'all';
+  fines = signal<Fine[]>([]);
+  loading = signal(false);
+  error = signal<string | null>(null);
+  count = signal(0);
 
+  filters: { label: string; value: 'all' | 'paid' | 'unpaid' }[] = [
+    { label: 'Wszystkie', value: 'all' },
+    { label: 'Nieopłacone', value: 'unpaid' },
+    { label: 'Opłacone', value: 'paid' },
+  ];
+
+  constructor(private api: ApiService) { }
+
+  ngOnInit() {
+    this.loadFines();
+  }
+
+  loadFines() {
+    this.loading.set(true);
+    this.error.set(null);
+
+    const params: Record<string, string> = {};
+    if (this.activeFilter === 'paid') params['paid'] = 'true';
+    if (this.activeFilter === 'unpaid') params['paid'] = 'false';
+
+    this.api.getFines(params).subscribe({
+      next: (response) => {
+        this.fines.set(response.results);
+        this.count.set(response.count);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('Nie udało się załadować kar.');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  setFilter(filter: 'all' | 'paid' | 'unpaid') {
+    this.activeFilter = filter;
+    this.loadFines();
+  }
+
+  settleFine(id: number) {
+    this.api.settleFine(id).subscribe({
+      next: () => this.loadFines(),
+      error: () => this.error.set('Nie udało się rozliczyć kary.')
+    });
+  }
 }

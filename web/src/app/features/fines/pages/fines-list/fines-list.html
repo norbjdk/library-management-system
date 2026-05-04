@@ -1,1 +1,94 @@
-<p>fines-list works!</p>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Kary</h1>
+            <p class="text-sm text-slate-500 mt-1">{{ count() }} rekordów</p>
+        </div>
+    </div>
+
+    <!-- Filtry -->
+    <div class="flex gap-2 flex-wrap">
+        @for (filter of filters; track filter.value) {
+        <button (click)="setFilter(filter.value)" class="px-3 py-2 rounded-lg text-sm transition-colors border
+          {{ activeFilter === filter.value
+            ? 'bg-slate-800 text-white border-slate-800'
+            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+            {{ filter.label }}
+        </button>
+        }
+    </div>
+
+    <!-- Error -->
+    @if (error()) {
+    <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+        {{ error() }}
+    </div>
+    }
+
+    <!-- Loading -->
+    @if (loading()) {
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+        <p class="text-slate-400 text-sm animate-pulse">Ładowanie kar...</p>
+    </div>
+    }
+
+    <!-- Tabela -->
+    @if (!loading()) {
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                    <th class="px-6 py-3 text-left">ID</th>
+                    <th class="px-6 py-3 text-left">Użytkownik</th>
+                    <th class="px-6 py-3 text-left">Wypożyczenie</th>
+                    <th class="px-6 py-3 text-left">Kwota</th>
+                    <th class="px-6 py-3 text-left">Data wystawienia</th>
+                    <th class="px-6 py-3 text-left">Data zapłaty</th>
+                    <th class="px-6 py-3 text-left">Status</th>
+                    <th class="px-6 py-3 text-left">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (fine of fines(); track fine.id) {
+                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 text-slate-400">#{{ fine.id }}</td>
+                    <td class="px-6 py-4 font-medium text-slate-800">Użytkownik #{{ fine.user }}</td>
+                    <td class="px-6 py-4 text-slate-600">Wypożyczenie #{{ fine.loan }}</td>
+                    <td class="px-6 py-4 font-medium text-slate-800">{{ fine.amount }} PLN</td>
+                    <td class="px-6 py-4 text-slate-500">{{ fine.issue_date }}</td>
+                    <td class="px-6 py-4 text-slate-500">{{ fine.paid_date ?? '—' }}</td>
+                    <td class="px-6 py-4">
+                        @if (fine.paid) {
+                        <span class="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">
+                            Opłacona
+                        </span>
+                        } @else {
+                        <span class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">
+                            Nieopłacona
+                        </span>
+                        }
+                    </td>
+                    <td class="px-6 py-4">
+                        @if (!fine.paid) {
+                        <button (click)="settleFine(fine.id)"
+                            class="text-xs text-green-600 hover:text-green-800 underline">
+                            Rozlicz
+                        </button>
+                        }
+                    </td>
+                </tr>
+                }
+
+                @empty {
+                <tr>
+                    <td colspan="8" class="px-6 py-16 text-center text-slate-400 text-sm">
+                        Brak kar
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
