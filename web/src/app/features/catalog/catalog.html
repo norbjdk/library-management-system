@@ -1,1 +1,19 @@
-<p>catalog works!</p>
+<section class="feature-shell page-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Katalog</p>
+            <h1>Przegląd księgozbioru</h1>
+            <p class="page-subtitle">Wyszukiwanie, dostępność egzemplarzy i przejścia do szczegółów książek w jednym
+                widoku.</p>
+        </div>
+
+        <div class="feature-shell-actions">
+            <a routerLink="/queue" class="feature-shell-link">Kolejka rezerwacji</a>
+            <a routerLink="/profile" class="feature-shell-link">Mój profil</a>
+        </div>
+    </div>
+
+    <app-catalog-list />
+</section>

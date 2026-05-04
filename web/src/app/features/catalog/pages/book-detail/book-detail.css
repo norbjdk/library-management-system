@@ -1,0 +1,11 @@
+:host {
+  display: block;
+}
+
+:host .metric-card strong {
+  font-size: 1.45rem;
+}
+
+:host table {
+  min-width: 100%;
+}

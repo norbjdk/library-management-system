@@ -13,89 +13,83 @@
   <!-- Filtry -->
   <div class="flex gap-2 flex-wrap">
     @for (filter of filters; track filter.value) {
-      <button
-        (click)="setFilter(filter.value)"
-        class="px-3 py-2 rounded-lg text-sm transition-colors border
+    <button (click)="setFilter(filter.value)" class="px-3 py-2 rounded-lg text-sm transition-colors border
           {{ activeFilter === filter.value
             ? 'bg-slate-800 text-white border-slate-800'
-            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}"
-      >
-        {{ filter.label }}
-      </button>
+            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+      {{ filter.label }}
+    </button>
     }
   </div>
 
   <!-- Error -->
   @if (error()) {
-    <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-      {{ error() }}
-    </div>
+  <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+    {{ error() }}
+  </div>
   }
 
   <!-- Loading -->
   @if (loading()) {
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
-      <p class="text-slate-400 text-sm animate-pulse">Ładowanie wypożyczeń...</p>
-    </div>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+    <p class="text-slate-400 text-sm animate-pulse">Ładowanie wypożyczeń...</p>
+  </div>
   }
 
   <!-- Tabela -->
   @if (!loading()) {
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
-            <th class="px-6 py-3 text-left">ID</th>
-            <th class="px-6 py-3 text-left">Użytkownik</th>
-            <th class="px-6 py-3 text-left">Egzemplarz</th>
-            <th class="px-6 py-3 text-left">Wypożyczono</th>
-            <th class="px-6 py-3 text-left">Termin zwrotu</th>
-            <th class="px-6 py-3 text-left">Zwrócono</th>
-            <th class="px-6 py-3 text-left">Status</th>
-            <th class="px-6 py-3 text-left">Akcje</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (loan of loans(); track loan.id) {
-            <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-              <td class="px-6 py-4 text-slate-400">#{{ loan.id }}</td>
-              <td class="px-6 py-4 font-medium text-slate-800">Użytkownik #{{ loan.user }}</td>
-              <td class="px-6 py-4 text-slate-600">Egzemplarz #{{ loan.copy }}</td>
-              <td class="px-6 py-4 text-slate-500">{{ loan.loan_date }}</td>
-              <td class="px-6 py-4 text-slate-500">{{ loan.due_date }}</td>
-              <td class="px-6 py-4 text-slate-500">{{ loan.return_date ?? '—' }}</td>
-              <td class="px-6 py-4">
-                <span class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(loan.status) }}">
-                  {{ getStatusLabel(loan.status) }}
-                </span>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex gap-2">
-                  <button class="text-xs text-slate-600 hover:text-slate-800 underline">
-                    Szczegóły
-                  </button>
-                  @if (loan.status === 'active' || loan.status === 'overdue') {
-                    <button
-                      (click)="returnLoan(loan.id)"
-                      class="text-xs text-green-600 hover:text-green-800 underline"
-                    >
-                      Zwróć
-                    </button>
-                  }
-                </div>
-              </td>
-            </tr>
-          }
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+          <th class="px-6 py-3 text-left">ID</th>
+          <th class="px-6 py-3 text-left">Użytkownik</th>
+          <th class="px-6 py-3 text-left">Egzemplarz</th>
+          <th class="px-6 py-3 text-left">Wypożyczono</th>
+          <th class="px-6 py-3 text-left">Termin zwrotu</th>
+          <th class="px-6 py-3 text-left">Zwrócono</th>
+          <th class="px-6 py-3 text-left">Status</th>
+          <th class="px-6 py-3 text-left">Akcje</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (loan of loans(); track loan.id) {
+        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4 text-slate-400">#{{ loan.id }}</td>
+          <td class="px-6 py-4 font-medium text-slate-800">{{ loan.user_name }}</td>
+          <td class="px-6 py-4 text-slate-600">{{ loan.book_title }} · egz. #{{ loan.copy }}</td>
+          <td class="px-6 py-4 text-slate-500">{{ loan.loan_date }}</td>
+          <td class="px-6 py-4 text-slate-500">{{ loan.due_date }}</td>
+          <td class="px-6 py-4 text-slate-500">{{ loan.return_date ?? '—' }}</td>
+          <td class="px-6 py-4">
+            <span class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(loan.status) }}">
+              {{ getStatusLabel(loan.status) }}
+            </span>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex gap-2">
+              <a [routerLink]="['/loans', loan.id]" class="text-xs text-slate-600 hover:text-slate-800 underline">
+                Szczegóły
+              </a>
+              @if (loan.status === 'active' || loan.status === 'overdue') {
+              <button (click)="returnLoan(loan.id)" class="text-xs text-green-600 hover:text-green-800 underline">
+                Zwróć
+              </button>
+              }
+            </div>
+          </td>
+        </tr>
+        }
 
-          @empty {
-            <tr>
-              <td colspan="8" class="px-6 py-16 text-center text-slate-400 text-sm">
-                Brak wypożyczeń
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+        @empty {
+        <tr>
+          <td colspan="8" class="px-6 py-16 text-center text-slate-400 text-sm">
+            Brak wypożyczeń
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
   }
 </div>

@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+
+:host table {
+  min-width: 100%;
+}
+
+:host select,
+:host input,
+:host textarea {
+  min-width: 0;
+}

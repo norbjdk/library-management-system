@@ -1,1 +1,19 @@
-<p>notifications works!</p>
+<section class="feature-shell page-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Komunikaty</p>
+            <h1>Powiadomienia systemowe</h1>
+            <p class="page-subtitle">Terminy, aktualizacje zamówień i komunikaty operacyjne dla czytelników oraz staffu.
+            </p>
+        </div>
+
+        <div class="feature-shell-actions">
+            <a routerLink="/orders" class="feature-shell-link">Zamówienia</a>
+            <a routerLink="/queue" class="feature-shell-link">Rezerwacje</a>
+        </div>
+    </div>
+
+    <app-notifications-list />
+</section>

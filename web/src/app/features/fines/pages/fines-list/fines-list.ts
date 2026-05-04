@@ -6,6 +6,7 @@ import { ApiService } from '../../../../core/services/api.service';
   selector: 'app-fines-list',
   imports: [],
   templateUrl: './fines-list.html',
+  styleUrl: './fines-list.css',
 })
 export class FinesList implements OnInit {
   activeFilter: 'all' | 'paid' | 'unpaid' = 'all';
@@ -20,7 +21,7 @@ export class FinesList implements OnInit {
     { label: 'Opłacone', value: 'paid' },
   ];
 
-  constructor(private api: ApiService) { }
+  constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.loadFines();
@@ -43,7 +44,7 @@ export class FinesList implements OnInit {
       error: () => {
         this.error.set('Nie udało się załadować kar.');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -55,7 +56,7 @@ export class FinesList implements OnInit {
   settleFine(id: number) {
     this.api.settleFine(id).subscribe({
       next: () => this.loadFines(),
-      error: () => this.error.set('Nie udało się rozliczyć kary.')
+      error: () => this.error.set('Nie udało się rozliczyć kary.'),
     });
   }
 }

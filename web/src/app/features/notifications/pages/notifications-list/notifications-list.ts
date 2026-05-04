@@ -6,6 +6,7 @@ import { ApiService } from '../../../../core/services/api.service';
   selector: 'app-notifications-list',
   imports: [],
   templateUrl: './notifications-list.html',
+  styleUrl: './notifications-list.css',
 })
 export class NotificationsList implements OnInit {
   activeFilter: 'all' | 'unread' | 'read' = 'all';

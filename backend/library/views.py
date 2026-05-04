@@ -310,10 +310,14 @@ class LoanViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can create loans.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą tworzyć wypożyczenia."
+            )
         copy = serializer.validated_data["copy"]
         if not copy.is_loanable:
-            raise ValidationError({"copy": "Selected copy is not available for loan."})
+            raise ValidationError(
+                {"copy": "Wybrany egzemplarz nie jest dostępny do wypożyczenia."}
+            )
         serializer.save()
         serializer.instance.copy.mark_unavailable()
         update_loan_status(serializer.instance)
@@ -321,14 +325,18 @@ class LoanViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can update loans.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą aktualizować wypożyczenia."
+            )
         serializer.save()
         update_loan_status(serializer.instance)
 
     def perform_destroy(self, instance):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can delete loans.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą usuwać wypożyczenia."
+            )
         instance.copy.mark_available()
         instance.delete()
 
@@ -337,7 +345,9 @@ class LoanViewSet(viewsets.ModelViewSet):
         loan = self.get_object()
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can return loans.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą zwracać wypożyczenia."
+            )
 
         loan.return_copy()
 
@@ -369,7 +379,9 @@ class LoanViewSet(viewsets.ModelViewSet):
         loan = self.get_object()
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can mark loans overdue.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą oznaczać wypożyczenia jako przeterminowane."
+            )
         if loan.return_date is None and loan.due_date < timezone.localdate():
             loan.refresh_status()
         return Response(self.get_serializer(loan).data)
@@ -412,13 +424,13 @@ class ReservationViewSet(viewsets.ModelViewSet):
         user = getattr(self.request, "user", None)
         instance = self.get_object()
         if not getattr(user, "is_staff", False) and instance.user_id != user.id:
-            raise PermissionDenied("You can only update your own reservations.")
+            raise PermissionDenied("Możesz aktualizować tylko swoje rezerwacje.")
         serializer.save()
 
     def perform_destroy(self, instance):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False) and instance.user_id != user.id:
-            raise PermissionDenied("You can only delete your own reservations.")
+            raise PermissionDenied("Możesz usuwać tylko swoje rezerwacje.")
         instance.delete()
 
     @action(detail=True, methods=["post"])
@@ -426,7 +438,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation = self.get_object()
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False) and reservation.user_id != user.id:
-            raise PermissionDenied("You can only cancel your own reservations.")
+            raise PermissionDenied("Możesz anulować tylko swoje rezerwacje.")
         reservation.cancel()
         return Response(self.get_serializer(reservation).data)
 
@@ -435,19 +447,21 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation = self.get_object()
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can fulfill reservations.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą realizować rezerwacje."
+            )
         available_copy = reservation.book.next_available_copy()
         if available_copy is None:
             raise ValidationError(
-                {"book": "No available copy can fulfill this reservation."}
+                {"book": "Brak dostępnego egzemplarza do realizacji tej rezerwacji."}
             )
         reservation.fulfill()
         available_copy.mark_unavailable()
         create_notification(
             reservation.user,
             notification_type=NotificationType.RESERVATION_READY,
-            title="Reservation fulfilled",
-            message=f"Your reservation #{reservation.id} for {reservation.book.title} is ready.",
+            title="Rezerwacja zrealizowana",
+            message=f"Twoja rezerwacja #{reservation.id} książki {reservation.book.title} jest gotowa do odbioru.",
             related_object_type="reservation",
             related_object_id=reservation.id,
         )
@@ -480,13 +494,13 @@ class FineViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can create fines.")
+            raise PermissionDenied("Tylko pracownicy biblioteki mogą tworzyć kary.")
         serializer.save()
         create_notification(
             serializer.instance.user,
             notification_type=NotificationType.FINE_ISSUED,
-            title="Fine issued",
-            message=f"Fine #{serializer.instance.id} has been issued for loan #{serializer.instance.loan_id}.",
+            title="Nałożono karę",
+            message=f"Nałożono karę #{serializer.instance.id} za wypożyczenie #{serializer.instance.loan_id}.",
             related_object_type="fine",
             related_object_id=serializer.instance.id,
         )
@@ -494,13 +508,15 @@ class FineViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can update fines.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą aktualizować kary."
+            )
         serializer.save()
 
     def perform_destroy(self, instance):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can delete fines.")
+            raise PermissionDenied("Tylko pracownicy biblioteki mogą usuwać kary.")
         instance.delete()
 
     @action(detail=True, methods=["post"])
@@ -508,15 +524,15 @@ class FineViewSet(viewsets.ModelViewSet):
         fine = self.get_object()
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can settle fines.")
+            raise PermissionDenied("Tylko pracownicy biblioteki mogą rozliczać kary.")
         fine.paid = True
         fine.paid_date = timezone.localdate()
         fine.save(update_fields=["paid", "paid_date"])
         create_notification(
             fine.user,
             notification_type=NotificationType.SYSTEM,
-            title="Fine settled",
-            message=f"Fine #{fine.id} has been marked as paid.",
+            title="Kara rozliczona",
+            message=f"Kara #{fine.id} została oznaczona jako opłacona.",
             related_object_type="fine",
             related_object_id=fine.id,
         )
@@ -603,19 +619,25 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can create notifications.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą tworzyć powiadomienia."
+            )
         serializer.save()
 
     def perform_update(self, serializer):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can update notifications.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą aktualizować powiadomienia."
+            )
         serializer.save()
 
     def perform_destroy(self, instance):
         user = getattr(self.request, "user", None)
         if not getattr(user, "is_staff", False):
-            raise PermissionDenied("Only staff members can delete notifications.")
+            raise PermissionDenied(
+                "Tylko pracownicy biblioteki mogą usuwać powiadomienia."
+            )
         instance.delete()
 
     @action(detail=True, methods=["post"])
@@ -623,7 +645,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notification = self.get_object()
         user = getattr(request, "user", None)
         if not getattr(user, "is_staff", False) and notification.user_id != user.id:
-            raise PermissionDenied("You can only mark your own notifications as read.")
+            raise PermissionDenied(
+                "Możesz oznaczać jako przeczytane tylko swoje powiadomienia."
+            )
         notification.mark_read()
         return Response(self.get_serializer(notification).data)
 
@@ -631,7 +655,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def mark_all_read(self, request):
         user = getattr(request, "user", None)
         if not getattr(user, "is_authenticated", False):
-            raise PermissionDenied("Authentication required.")
+            raise PermissionDenied("Wymagana autentykacja.")
         queryset = Notification.objects.filter(user_id=user.id)
         updated = queryset.filter(is_read=False).update(
             is_read=True, read_at=timezone.now()
@@ -645,7 +669,7 @@ class CurrentUserView(APIView):
     def get_user_model_instance(self, request):
         user = getattr(request, "user", None)
         if not getattr(user, "is_authenticated", False):
-            raise PermissionDenied("Authentication required.")
+            raise PermissionDenied("Wymagana autentykacja.")
         return get_object_or_404(LibraryUser, pk=user.id)
 
     def get(self, request):

@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+:host .panel-card {
+  height: 100%;
+}
+
+:host table {
+  min-width: 100%;
+}
+
+:host tbody tr:last-child td {
+  border-bottom: 0;
+}

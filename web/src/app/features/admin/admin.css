@@ -1,0 +1,47 @@
+:host {
+  display: block;
+}
+
+.feature-shell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.feature-shell-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 32, 51, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.feature-shell-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.feature-shell-card {
+  border: 1px solid rgba(22, 32, 51, 0.08);
+  border-radius: 24px;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.feature-shell-card strong {
+  display: block;
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.feature-shell-card p:last-child {
+  margin: 0;
+  color: #617089;
+  line-height: 1.6;
+}

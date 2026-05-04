@@ -1,0 +1,11 @@
+:host {
+  display: block;
+}
+
+:host table {
+  min-width: 100%;
+}
+
+:host a {
+  text-decoration: none;
+}

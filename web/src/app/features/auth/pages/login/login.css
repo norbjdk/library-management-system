@@ -1,0 +1,12 @@
+:host {
+  display: block;
+}
+
+.auth-stage {
+  width: min(100%, 34rem);
+  margin-inline: auto;
+}
+
+.panel-card {
+  width: 100%;
+}

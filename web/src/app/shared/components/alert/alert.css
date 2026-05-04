@@ -1,0 +1,86 @@
+:host {
+  display: block;
+}
+
+.alert-shell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  border: 1px solid rgba(22, 32, 51, 0.08);
+  border-radius: 20px;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.alert-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.alert-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.alert-message {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.alert-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alert-info {
+  background: rgba(232, 241, 255, 0.92);
+  color: #214a8a;
+}
+
+.alert-info .alert-icon {
+  background: rgba(33, 74, 138, 0.14);
+}
+
+.alert-success {
+  background: rgba(232, 248, 239, 0.92);
+  color: #1f7a53;
+}
+
+.alert-success .alert-icon {
+  background: rgba(31, 122, 83, 0.14);
+}
+
+.alert-warning {
+  background: rgba(255, 247, 227, 0.94);
+  color: #9b6116;
+}
+
+.alert-warning .alert-icon {
+  background: rgba(155, 97, 22, 0.16);
+}
+
+.alert-danger {
+  background: rgba(254, 236, 236, 0.94);
+  color: #a43b3b;
+}
+
+.alert-danger .alert-icon {
+  background: rgba(164, 59, 59, 0.16);
+}

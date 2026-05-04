@@ -1,1 +1,5 @@
-<p>badge works!</p>
+<span class="badge-shell" [class.badge-neutral]="tone() === 'neutral'" [class.badge-info]="tone() === 'info'"
+    [class.badge-success]="tone() === 'success'" [class.badge-warning]="tone() === 'warning'"
+    [class.badge-danger]="tone() === 'danger'" [class.badge-subtle]="subtle()">
+    {{ label() }}
+</span>

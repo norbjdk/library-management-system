@@ -1,1 +1,10 @@
-<p>button works!</p>
+<button [attr.type]="type()" class="button-shell" [class.button-primary]="tone() === 'primary'"
+    [class.button-secondary]="tone() === 'secondary'" [class.button-ghost]="tone() === 'ghost'"
+    [class.button-danger]="tone() === 'danger'" [class.button-full]="fullWidth()" [disabled]="disabled() || busy()"
+    [attr.aria-busy]="busy()" (click)="onClick($event)">
+    @if (icon()) {
+    <span class="button-icon">{{ icon() }}</span>
+    }
+
+    <span>{{ busy() ? 'Trwa...' : label() }}</span>
+</button>

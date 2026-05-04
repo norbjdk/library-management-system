@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
   selector: 'app-navbar',
   imports: [RouterLink, RouterLinkActive],
   templateUrl: './navbar.html',
+  styleUrl: './navbar.css',
 })
 export class NavbarComponent {
   navItems = computed(() => {

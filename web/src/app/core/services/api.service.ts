@@ -35,8 +35,7 @@ export class ApiService {
     return new HttpParams({ fromObject: params ?? {} });
   }
 
-  // --- Books ---
-  getBooks(params?: Record<string, string>): Observable<PaginatedResponse<Book>> {
+    getBooks(params?: Record<string, string>): Observable<PaginatedResponse<Book>> {
     return this.http
       .get<PaginatedResponse<Book> | Book[]>(`${this.base}/catalog/books/`, {
         params: this.buildParams(params),
@@ -60,7 +59,6 @@ export class ApiService {
       .pipe(map((response) => this.normalizeCollection(response)));
   }
 
-  // --- Loans ---
   getLoans(params?: Record<string, string>): Observable<PaginatedResponse<Loan>> {
     return this.http
       .get<PaginatedResponse<Loan> | Loan[]>(`${this.base}/loans/`, {
@@ -81,7 +79,6 @@ export class ApiService {
     return this.http.post<Loan>(`${this.base}/loans/${id}/return_loan/`, {});
   }
 
-  // --- Reservations ---
   getReservations(params?: Record<string, string>): Observable<PaginatedResponse<Reservation>> {
     return this.http
       .get<PaginatedResponse<Reservation> | Reservation[]>(`${this.base}/reservations/`, {
@@ -102,7 +99,6 @@ export class ApiService {
     return this.http.post<Reservation>(`${this.base}/reservations/${id}/fulfill/`, {});
   }
 
-  // --- Fines ---
   getFines(params?: Record<string, string>): Observable<PaginatedResponse<Fine>> {
     return this.http
       .get<PaginatedResponse<Fine> | Fine[]>(`${this.base}/fines/`, {
@@ -115,7 +111,6 @@ export class ApiService {
     return this.http.post<Fine>(`${this.base}/fines/${id}/settle/`, {});
   }
 
-  // --- Notifications ---
   getNotifications(params?: Record<string, string>): Observable<PaginatedResponse<Notification>> {
     return this.http
       .get<PaginatedResponse<Notification> | Notification[]>(`${this.base}/notifications/`, {
@@ -132,7 +127,6 @@ export class ApiService {
     return this.http.post<{ updated: number }>(`${this.base}/notifications/mark_all_read/`, {});
   }
 
-  // --- Orders ---
   getOrders(params?: Record<string, string>): Observable<PaginatedResponse<Order>> {
     return this.http
       .get<PaginatedResponse<Order> | Order[]>(`${this.base}/orders/`, {
@@ -157,7 +151,6 @@ export class ApiService {
     return this.http.post<Order>(`${this.base}/orders/${id}/cancel/`, {});
   }
 
-  // --- Readers / Profile ---
   getReaders(params?: Record<string, string>): Observable<PaginatedResponse<User>> {
     return this.http
       .get<PaginatedResponse<User> | User[]>(`${this.base}/readers/`, {

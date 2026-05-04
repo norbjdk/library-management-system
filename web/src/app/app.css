@@ -70,6 +70,23 @@ textarea {
 
 .app-shell {
   min-height: 100vh;
+  position: relative;
+}
+
+.app-shell-pending {
+  overflow: clip;
+}
+
+.app-bootstrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(246, 239, 231, 0.72);
+  backdrop-filter: blur(6px);
+  z-index: 50;
 }
 
 .app-main {

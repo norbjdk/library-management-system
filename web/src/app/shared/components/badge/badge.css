@@ -1,0 +1,46 @@
+:host {
+  display: inline-flex;
+}
+
+.badge-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 1.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.badge-neutral {
+  background: rgba(22, 32, 51, 0.08);
+  color: #253249;
+}
+
+.badge-info {
+  background: rgba(33, 74, 138, 0.12);
+  color: #214a8a;
+}
+
+.badge-success {
+  background: rgba(31, 122, 83, 0.14);
+  color: #1f7a53;
+}
+
+.badge-warning {
+  background: rgba(155, 97, 22, 0.16);
+  color: #9b6116;
+}
+
+.badge-danger {
+  background: rgba(164, 59, 59, 0.14);
+  color: #a43b3b;
+}
+
+.badge-subtle {
+  background: transparent;
+  border-color: currentColor;
+}

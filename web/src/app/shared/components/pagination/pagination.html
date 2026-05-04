@@ -1,1 +1,15 @@
-<p>pagination works!</p>
+@if (totalItems() > 0) {
+<nav class="pagination-shell" aria-label="Paginacja">
+    <button type="button" (click)="goTo(page() - 1)" [disabled]="page() <= 1">Poprzednia</button>
+
+    <div class="pagination-pages">
+        @for (item of pages(); track item) {
+        <button type="button" (click)="goTo(item)" [class.pagination-active]="item === page()">
+            {{ item }}
+        </button>
+        }
+    </div>
+
+    <button type="button" (click)="goTo(page() + 1)" [disabled]="page() >= totalPages()">Następna</button>
+</nav>
+}

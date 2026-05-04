@@ -1,1 +1,18 @@
-<p>orders works!</p>
+<section class="feature-shell page-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Zaopatrzenie</p>
+            <h1>Zamówienia biblioteki</h1>
+            <p class="page-subtitle">Tworzenie nowych zamówień i monitoring ich statusów od szkicu po odbiór.</p>
+        </div>
+
+        <div class="feature-shell-actions">
+            <a routerLink="/admin" class="feature-shell-link">Dashboard</a>
+            <a routerLink="/catalog" class="feature-shell-link">Katalog</a>
+        </div>
+    </div>
+
+    <app-order-list />
+</section>

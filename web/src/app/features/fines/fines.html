@@ -1,1 +1,18 @@
-<p>fines works!</p>
+<section class="feature-shell page-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Finanse</p>
+            <h1>Obsługa kar czytelników</h1>
+            <p class="page-subtitle">Zaległości i rozliczenia są pobierane bezpośrednio z API bibliotecznego.</p>
+        </div>
+
+        <div class="feature-shell-actions">
+            <a routerLink="/notifications" class="feature-shell-link">Powiadomienia</a>
+            <a routerLink="/loans" class="feature-shell-link">Wypożyczenia</a>
+        </div>
+    </div>
+
+    <app-fines-list />
+</section>

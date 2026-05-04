@@ -1,10 +1,12 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { guestGuard } from './core/guards/guest.guard';
 import { staffGuard } from './core/guards/staff.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
+    canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/pages/login/login').then((m) => m.Login),
   },
   {
@@ -32,6 +34,11 @@ export const routes: Routes = [
         path: 'loans',
         loadComponent: () =>
           import('./features/loans/pages/loan-list/loan-list').then((m) => m.LoanList),
+      },
+      {
+        path: 'loans/:id',
+        loadComponent: () =>
+          import('./features/loans/pages/loan-detail/loan-detail').then((m) => m.LoanDetail),
       },
       {
         path: 'queue',

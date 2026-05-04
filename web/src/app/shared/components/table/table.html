@@ -1,1 +1,35 @@
-<p>table works!</p>
+<div class="table-shell">
+    <table>
+        @if (caption()) {
+        <caption>{{ caption() }}</caption>
+        }
+
+        <thead>
+            <tr>
+                @for (column of columns(); track column.key) {
+                <th [class.table-left]="!column.align || column.align === 'left'"
+                    [class.table-center]="column.align === 'center'" [class.table-right]="column.align === 'right'">
+                    {{ column.label }}
+                </th>
+                }
+            </tr>
+        </thead>
+
+        <tbody>
+            @for (row of rows(); track trackRow($index, row)) {
+            <tr>
+                @for (column of columns(); track column.key) {
+                <td [class.table-left]="!column.align || column.align === 'left'"
+                    [class.table-center]="column.align === 'center'" [class.table-right]="column.align === 'right'">
+                    {{ formatValue(row[column.key], column.emptyValue ?? '—') }}
+                </td>
+                }
+            </tr>
+            } @empty {
+            <tr>
+                <td [attr.colspan]="columns().length || 1" class="table-empty">{{ emptyLabel() }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>

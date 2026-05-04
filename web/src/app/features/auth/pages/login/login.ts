@@ -1,12 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   imports: [FormsModule],
   templateUrl: './login.html',
+  styleUrl: './login.css',
 })
 export class Login {
   mode = signal<'login' | 'register'>('login');
@@ -26,7 +27,12 @@ export class Login {
   constructor(
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {}
+
+  private resolvePostAuthRedirect(): string {
+    return this.route.snapshot.queryParamMap.get('redirectTo') || '/catalog';
+  }
 
   setMode(mode: 'login' | 'register') {
     this.mode.set(mode);
@@ -45,7 +51,7 @@ export class Login {
 
     this.auth.login(this.email, this.password).subscribe({
       next: () => {
-        this.router.navigate(['/catalog'], { replaceUrl: true });
+        this.router.navigateByUrl(this.resolvePostAuthRedirect(), { replaceUrl: true });
       },
       error: (err) => {
         this.error.set(err?.error?.detail ?? 'Nieprawidłowe dane logowania.');
@@ -81,7 +87,7 @@ export class Login {
       })
       .subscribe({
         next: () => {
-          this.router.navigate(['/catalog'], { replaceUrl: true });
+          this.router.navigateByUrl(this.resolvePostAuthRedirect(), { replaceUrl: true });
         },
         error: (err) => {
           this.error.set(

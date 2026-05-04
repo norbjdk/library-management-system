@@ -9,6 +9,7 @@ import { AuthService } from '../../../../core/services/auth.service';
   selector: 'app-dashboard',
   imports: [],
   templateUrl: './dashboard.html',
+  styleUrl: './dashboard.css',
 })
 export class Dashboard implements OnInit {
   stats = signal<DashboardStats | null>(null);

@@ -8,6 +8,7 @@ import { ApiService } from '../../../../core/services/api.service';
   selector: 'app-catalog-list',
   imports: [FormsModule, RouterLink],
   templateUrl: './catalog-list.html',
+  styleUrl: './catalog-list.css',
 })
 export class CatalogList implements OnInit {
   searchQuery = '';

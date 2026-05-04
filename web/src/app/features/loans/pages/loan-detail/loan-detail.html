@@ -1,1 +1,96 @@
-<p>loan-detail works!</p>
+<section class="page-shell loan-detail-shell">
+    <app-breadcrumb [items]="breadcrumbItems()" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Szczegóły wypożyczenia</p>
+            <h1>Pozycja obiegu bibliotecznego</h1>
+            <p class="page-subtitle">Pełny wgląd w czytelnika, książkę i terminy związane z jednym wypożyczeniem.</p>
+        </div>
+
+        <a routerLink="/loans" class="feature-shell-link">Powrót do listy</a>
+    </div>
+
+    @if (error()) {
+    <app-alert tone="danger" title="Błąd szczegółów" [message]="error() ?? ''" />
+    }
+
+    @if (loading()) {
+    <div class="panel-card loan-detail-loading">
+        <app-spinner label="Ładowanie szczegółów wypożyczenia..." size="lg" />
+    </div>
+    }
+
+    @if (loan(); as currentLoan) {
+    <div class="loan-detail-grid">
+        <section class="panel-card p-6 space-y-6">
+            <div class="loan-detail-headline">
+                <div>
+                    <p class="muted-label">Książka</p>
+                    <h2>{{ currentLoan.book_title }}</h2>
+                    <p class="page-subtitle">Czytelnik: {{ currentLoan.user_name }}</p>
+                </div>
+
+                <app-badge [label]="statusLabel()" [tone]="statusTone()" />
+            </div>
+
+            <dl class="loan-detail-metadata">
+                <div>
+                    <dt>ID wypożyczenia</dt>
+                    <dd>#{{ currentLoan.id }}</dd>
+                </div>
+                <div>
+                    <dt>ID książki</dt>
+                    <dd>#{{ currentLoan.book_id }}</dd>
+                </div>
+                <div>
+                    <dt>ID egzemplarza</dt>
+                    <dd>#{{ currentLoan.copy }}</dd>
+                </div>
+                <div>
+                    <dt>Data wypożyczenia</dt>
+                    <dd>{{ currentLoan.loan_date }}</dd>
+                </div>
+                <div>
+                    <dt>Termin zwrotu</dt>
+                    <dd>{{ currentLoan.due_date }}</dd>
+                </div>
+                <div>
+                    <dt>Data zwrotu</dt>
+                    <dd>{{ currentLoan.return_date ?? 'Jeszcze nie zwrócono' }}</dd>
+                </div>
+            </dl>
+        </section>
+
+        <aside class="panel-card p-6 space-y-5">
+            <div>
+                <p class="muted-label">Ocena terminu</p>
+                <h3>{{ currentLoan.is_overdue ? 'Wymaga reakcji' : 'Status bieżący' }}</h3>
+                <p class="page-subtitle">
+                    @if (currentLoan.is_overdue) {
+                    Przeterminowanie: {{ currentLoan.overdue_days }} dni.
+                    } @else {
+                    Do terminu pozostało {{ currentLoan.days_until_due }} dni.
+                    }
+                </p>
+            </div>
+
+            @if (canReturn()) {
+            <app-button label="Zaksięguj zwrot" tone="primary" [busy]="returning()" [fullWidth]="true"
+                (pressed)="openReturnModal()" />
+            } @else {
+            <app-alert tone="success" title="Zwrot zakończony" message="To wypożyczenie zostało już rozliczone." />
+            }
+        </aside>
+    </div>
+
+    <app-modal [open]="showReturnModal()" title="Potwierdź zwrot"
+        description="Ta operacja ustawi wypożyczenie jako zwrócone i odświeży listę obiegu."
+        (closed)="closeReturnModal()">
+        <div class="loan-detail-modal-actions">
+            <app-button label="Anuluj" tone="ghost" (pressed)="closeReturnModal()" />
+            <app-button label="Potwierdź zwrot" [busy]="returning()" (pressed)="confirmReturn()" />
+        </div>
+    </app-modal>
+    }
+</section>

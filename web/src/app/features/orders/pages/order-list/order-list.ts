@@ -8,6 +8,7 @@ import { ApiService } from '../../../../core/services/api.service';
   selector: 'app-order-list',
   imports: [FormsModule],
   templateUrl: './order-list.html',
+  styleUrl: './order-list.css',
 })
 export class OrderList implements OnInit {
   activeFilter: Order['status'] | 'all' = 'all';

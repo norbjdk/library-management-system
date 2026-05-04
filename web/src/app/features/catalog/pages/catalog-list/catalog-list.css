@@ -1,0 +1,11 @@
+:host {
+  display: block;
+}
+
+:host article.panel-card {
+  height: 100%;
+}
+
+:host input {
+  min-width: 0;
+}

@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.breadcrumb-shell ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  color: #6b778d;
+  font-size: 0.84rem;
+}
+
+.breadcrumb-shell li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.breadcrumb-shell li:not(:last-child)::after {
+  content: '/';
+  color: rgba(22, 32, 51, 0.28);
+}
+
+.breadcrumb-shell a {
+  text-decoration: none;
+  color: #3d4d66;
+}
+
+.breadcrumb-shell a:hover {
+  color: #162033;
+}
+
+.breadcrumb-shell span {
+  color: #162033;
+  font-weight: 600;
+}

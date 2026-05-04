@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+.table-shell {
+  overflow-x: auto;
+  border: 1px solid rgba(22, 32, 51, 0.08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+caption {
+  padding: 1rem 1rem 0;
+  text-align: left;
+  font-weight: 700;
+  color: #314057;
+}
+
+th,
+td {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid rgba(22, 32, 51, 0.08);
+  font-size: 0.92rem;
+}
+
+th {
+  background: rgba(246, 239, 231, 0.72);
+  color: #5d6a82;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+tbody tr:hover {
+  background: rgba(246, 239, 231, 0.34);
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-left {
+  text-align: left;
+}
+
+.table-center {
+  text-align: center;
+}
+
+.table-right {
+  text-align: right;
+}
+
+.table-empty {
+  text-align: center;
+  color: #7a879b;
+  padding: 2.75rem 1rem;
+}

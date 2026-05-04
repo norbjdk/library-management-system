@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+.input-shell {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.input-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #314057;
+}
+
+.input-field {
+  width: 100%;
+  border: 1px solid rgba(22, 32, 51, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #162033;
+  padding: 0.85rem 1rem;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: rgba(197, 106, 45, 0.45);
+  box-shadow: 0 0 0 4px rgba(197, 106, 45, 0.12);
+}
+
+.input-textarea {
+  resize: vertical;
+  min-height: 8rem;
+}
+
+.input-help,
+.input-error {
+  font-size: 0.8rem;
+}
+
+.input-help {
+  color: #6b778d;
+}
+
+.input-error {
+  color: #b93d3d;
+}

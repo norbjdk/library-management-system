@@ -10,6 +10,8 @@ from rest_framework.exceptions import AuthenticationFailed
 TOKEN_SALT = "library-management-system.auth"
 ACCESS_TOKEN_LIFETIME_SECONDS = 60 * 60
 REFRESH_TOKEN_LIFETIME_SECONDS = 30 * 24 * 60 * 60
+ACCESS_COOKIE_NAME = "library_access_token"
+REFRESH_COOKIE_NAME = "library_refresh_token"
 
 
 @dataclass(slots=True)
@@ -107,17 +109,27 @@ class LibraryTokenAuthentication(BaseAuthentication):
 
     def authenticate(self, request):
         header = get_authorization_header(request).split()
+
+        token: str | None = None
+
         if not header:
+            token = request.COOKIES.get(ACCESS_COOKIE_NAME)
+            if not token:
+                return None
+
+        if header:
+            if len(header) != 2:
+                raise AuthenticationFailed("Invalid authorization header.")
+
+            keyword = header[0].decode("utf-8")
+            if keyword.lower() != self.keyword.lower():
+                return None
+
+            token = header[1].decode("utf-8")
+
+        if token is None:
             return None
 
-        if len(header) != 2:
-            raise AuthenticationFailed("Invalid authorization header.")
-
-        keyword = header[0].decode("utf-8")
-        if keyword.lower() != self.keyword.lower():
-            return None
-
-        token = header[1].decode("utf-8")
         payload = _load_token(token, max_age=ACCESS_TOKEN_LIFETIME_SECONDS)
         if payload.get("token_type") != "access":
             raise AuthenticationFailed("Expected an access token.")

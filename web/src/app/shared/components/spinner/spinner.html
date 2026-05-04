@@ -1,1 +1,4 @@
-<p>spinner works!</p>
+<div class="spinner-shell">
+    <span class="spinner-ring" [class.spinner-sm]="size() === 'sm'" [class.spinner-lg]="size() === 'lg'"></span>
+    <span class="spinner-label">{{ label() }}</span>
+</div>

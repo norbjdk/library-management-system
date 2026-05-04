@@ -1,1 +1,24 @@
-<p>modal works!</p>
+@if (open()) {
+<div class="modal-backdrop" (click)="onBackdropClick($event)">
+    <section class="modal-panel panel-card" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+        <header class="modal-header">
+            <div>
+                @if (title()) {
+                <h3>{{ title() }}</h3>
+                }
+                @if (description()) {
+                <p>{{ description() }}</p>
+                }
+            </div>
+
+            @if (dismissible()) {
+            <button type="button" class="modal-close" (click)="close()">{{ closeLabel() }}</button>
+            }
+        </header>
+
+        <div class="modal-content">
+            <ng-content></ng-content>
+        </div>
+    </section>
+</div>
+}

@@ -1,1 +1,19 @@
-<p>loans works!</p>
+<section class="feature-shell page-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Obieg książek</p>
+            <h1>Wypożyczenia i zwroty</h1>
+            <p class="page-subtitle">Stan egzemplarzy, terminy i statusy zwrotów są obsługiwane z poziomu jednego
+                widoku.</p>
+        </div>
+
+        <div class="feature-shell-actions">
+            <a routerLink="/queue" class="feature-shell-link">Kolejka</a>
+            <a routerLink="/fines" class="feature-shell-link">Kary</a>
+        </div>
+    </div>
+
+    <app-loan-list />
+</section>

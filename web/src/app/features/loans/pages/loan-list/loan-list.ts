@@ -1,12 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Loan } from '../../../../core/models/loan';
 import { ApiService } from '../../../../core/services/api.service';
 
 @Component({
   selector: 'app-loan-list',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './loan-list.html',
+  styleUrl: './loan-list.css',
 })
 export class LoanList implements OnInit {
   activeFilter: Loan['status'] | 'all' = 'all';

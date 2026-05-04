@@ -1,1 +1,19 @@
-<p>input works!</p>
+<label class="input-shell" [attr.for]="id() || null">
+    @if (label()) {
+    <span class="input-label">{{ label() }}</span>
+    }
+
+    @if (type() === 'textarea') {
+    <textarea class="input-field input-textarea" [id]="id()" [placeholder]="placeholder()" [value]="value()"
+        [required]="required()" [rows]="rows()" (input)="onInput($event)" (blur)="onBlur($event)"></textarea>
+    } @else {
+    <input class="input-field" [id]="id()" [type]="type()" [placeholder]="placeholder()" [value]="value()"
+        [required]="required()" [autocomplete]="autocomplete()" (input)="onInput($event)" (blur)="onBlur($event)" />
+    }
+
+    @if (error()) {
+    <span class="input-error">{{ error() }}</span>
+    } @else if (helpText()) {
+    <span class="input-help">{{ helpText() }}</span>
+    }
+</label>

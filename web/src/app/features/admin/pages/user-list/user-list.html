@@ -1,1 +1,40 @@
-<p>user-list works!</p>
+<section class="page-shell user-list-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Czytelnicy</p>
+            <h1>Zarejestrowani użytkownicy</h1>
+            <p class="page-subtitle">Lista kont czytelników i pracowników wraz z podsumowaniem aktywności.</p>
+        </div>
+
+        <app-button label="Odśwież listę" tone="secondary" icon="↻" (pressed)="loadReaders()" />
+    </div>
+
+    <div class="user-list-summary">
+        <app-badge [label]="totalItems() + ' rekordów'" tone="info" />
+        <app-badge [label]="totalReaders() + ' czytelników'" tone="success" />
+        <app-badge [label]="totalStaff() + ' pracowników'" tone="warning" />
+    </div>
+
+    <section class="panel-card p-6 space-y-5">
+        <app-input label="Szukaj użytkownika" type="search" placeholder="Imię, nazwisko, email lub rola"
+            [value]="search()" (valueChange)="setSearch($event)" />
+
+        @if (error()) {
+        <app-alert tone="danger" title="Błąd pobierania" [message]="error() ?? ''" />
+        }
+
+        @if (loading()) {
+        <div class="user-list-loading">
+            <app-spinner label="Ładowanie listy użytkowników..." size="lg" />
+        </div>
+        } @else {
+        <app-table [columns]="columns" [rows]="tableRows()" caption="Użytkownicy biblioteki"
+            emptyLabel="Brak użytkowników spełniających aktualne kryteria." />
+
+        <app-pagination [page]="currentPage()" [pageSize]="8" [totalItems]="totalItems()"
+            (pageChange)="setPage($event)" />
+        }
+    </section>
+</section>

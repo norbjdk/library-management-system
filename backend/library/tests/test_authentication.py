@@ -30,6 +30,8 @@ class AuthenticationApiTests(LibraryAPITestCase):
         self.assertEqual(response.data["user"]["last_name"], "Nowak")
         self.assertEqual(response.data["user"]["role"], LibraryRole.READER)
         self.assertFalse(response.data["user"]["is_staff"])
+        self.assertIn("library_access_token", response.cookies)
+        self.assertIn("library_refresh_token", response.cookies)
 
     def test_login_returns_token_pair_and_profile(self):
         response = self.client.post(
@@ -46,6 +48,8 @@ class AuthenticationApiTests(LibraryAPITestCase):
         self.assertEqual(response.data["user"]["full_name"], self.reader.full_name)
         self.assertEqual(response.data["user"]["role"], LibraryRole.READER)
         self.assertFalse(response.data["user"]["is_staff"])
+        self.assertIn("library_access_token", response.cookies)
+        self.assertIn("library_refresh_token", response.cookies)
 
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
@@ -68,6 +72,39 @@ class AuthenticationApiTests(LibraryAPITestCase):
         self.assertIn("access_token", response.data)
         self.assertIn("refresh_token", response.data)
         self.assertEqual(response.data["token_type"], "Bearer")
+
+    def test_refresh_accepts_refresh_cookie(self):
+        refresh_token = self.token_pair(self.reader)["refresh_token"]
+        self.client.cookies["library_refresh_token"] = refresh_token
+
+        response = self.client.post(reverse("auth-refresh"), {}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access_token", response.data)
+        self.assertIn("library_access_token", response.cookies)
+
+    def test_me_endpoint_accepts_access_cookie(self):
+        access_token = self.token_pair(self.reader)["access_token"]
+        self.client.cookies["library_access_token"] = access_token
+
+        response = self.client.get(reverse("auth-me"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["email"], self.reader.email)
+
+    def test_logout_clears_auth_cookies(self):
+        self.client.cookies["library_access_token"] = self.token_pair(self.reader)[
+            "access_token"
+        ]
+        self.client.cookies["library_refresh_token"] = self.token_pair(self.reader)[
+            "refresh_token"
+        ]
+
+        response = self.client.post(reverse("auth-logout"), {}, format="json")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.cookies["library_access_token"].value, "")
+        self.assertEqual(response.cookies["library_refresh_token"].value, "")
 
     def test_me_endpoint_returns_authenticated_user(self):
         response = self.authenticated_client(self.reader).get(reverse("auth-me"))

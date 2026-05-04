@@ -1,1 +1,16 @@
-<p>alert works!</p>
+<section class="alert-shell" [class.alert-info]="tone() === 'info'" [class.alert-success]="tone() === 'success'"
+    [class.alert-warning]="tone() === 'warning'" [class.alert-danger]="tone() === 'danger'" role="alert">
+    <span class="alert-icon">{{ icon() }}</span>
+    <div class="alert-copy">
+        @if (title()) {
+        <p class="alert-title">{{ title() }}</p>
+        }
+        <p class="alert-message">{{ message() }}</p>
+    </div>
+
+    @if (dismissible()) {
+    <button type="button" class="alert-close" (click)="dismiss()" aria-label="Zamknij alert">
+        Zamknij
+    </button>
+    }
+</section>

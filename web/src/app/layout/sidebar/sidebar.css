@@ -1,0 +1,9 @@
+:host {
+  display: block;
+}
+
+aside {
+  position: sticky;
+  top: 88px;
+  height: calc(100vh - 88px);
+}

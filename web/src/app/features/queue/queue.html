@@ -1,1 +1,19 @@
-<p>queue works!</p>
+<section class="feature-shell page-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Rezerwacje</p>
+            <h1>Kolejka i gotowość odbioru</h1>
+            <p class="page-subtitle">Oczekujące, zrealizowane i wygasłe rezerwacje są obsługiwane w jednym przepływie.
+            </p>
+        </div>
+
+        <div class="feature-shell-actions">
+            <a routerLink="/catalog" class="feature-shell-link">Katalog</a>
+            <a routerLink="/notifications" class="feature-shell-link">Powiadomienia</a>
+        </div>
+    </div>
+
+    <app-queue-list />
+</section>
