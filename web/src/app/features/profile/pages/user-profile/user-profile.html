@@ -106,11 +106,19 @@
             </div>
 
             <div class="flex justify-end">
-                <button type="button" class="accent-button" [disabled]="saving()" (click)="saveProfile()">
+                <button type="button" class="accent-button" [disabled]="saving()" (click)="requestSaveProfile()">
                     {{ saving() ? 'Zapisywanie...' : 'Zapisz zmiany' }}
                 </button>
             </div>
         </section>
     </div>
     }
+
+    <app-modal [open]="saveModalOpen()" title="Zapisać zmiany profilu?"
+        description="Zaktualizujemy Twoje dane kontaktowe i odświeżymy dane konta." (closed)="closeSaveModal()">
+        <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeSaveModal()">Anuluj</button>
+            <button type="button" class="accent-button w-full sm:w-auto" (click)="confirmSaveProfile()">Zapisz</button>
+        </div>
+    </app-modal>
 </div>

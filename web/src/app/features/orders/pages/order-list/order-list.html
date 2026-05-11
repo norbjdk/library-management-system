@@ -55,9 +55,10 @@
             </div>
         </div>
 
-        <div class="flex justify-end gap-3">
-            <button type="button" class="secondary-button" (click)="toggleCreateForm()">Anuluj</button>
-            <button type="button" class="accent-button" [disabled]="creating()" (click)="createOrder()">
+        <div class="flex flex-col sm:flex-row sm:justify-end gap-3">
+            <button type="button" class="secondary-button w-full sm:w-auto" (click)="toggleCreateForm()">Anuluj</button>
+            <button type="button" class="accent-button w-full sm:w-auto" [disabled]="creating()"
+                (click)="requestCreateOrder()">
                 {{ creating() ? 'Zapisywanie...' : 'Utwórz zamówienie' }}
             </button>
         </div>
@@ -121,19 +122,19 @@
                     <td class="px-6 py-4">
                         <div class="flex gap-2">
                             @if (order.status === 'draft') {
-                            <button (click)="submitOrder(order.id)"
+                            <button (click)="requestSubmitOrder(order.id)"
                                 class="text-xs text-blue-600 hover:text-blue-800 underline">
                                 Złóż
                             </button>
                             }
                             @if (order.status === 'submitted') {
-                            <button (click)="receiveOrder(order.id)"
+                            <button (click)="requestReceiveOrder(order.id)"
                                 class="text-xs text-green-600 hover:text-green-800 underline">
                                 Odbierz
                             </button>
                             }
                             @if (order.status === 'draft' || order.status === 'submitted') {
-                            <button (click)="cancelOrder(order.id)"
+                            <button (click)="requestCancelOrder(order.id)"
                                 class="text-xs text-red-600 hover:text-red-800 underline">
                                 Anuluj
                             </button>
@@ -154,4 +155,13 @@
         </table>
     </div>
     }
+
+    <app-modal [open]="actionModalOpen()" [title]="actionModalTitle()" [description]="actionModalDescription()"
+        (closed)="closeActionModal()">
+        <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeActionModal()">Anuluj</button>
+            <button type="button" class="accent-button w-full sm:w-auto"
+                (click)="confirmActionModal()">Potwierdź</button>
+        </div>
+    </app-modal>
 </div>

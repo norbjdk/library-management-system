@@ -30,6 +30,11 @@ class ValidationAndErrorApiTests(LibraryAPITestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+        self.assertIn("non_field_errors", response.data)
+        self.assertEqual(
+            response.data["non_field_errors"][0],
+            "Masz już rezerwację tej książki. Sprawdź jej status w kolejce.",
+        )
 
     def test_negative_order_quantity_returns_400(self):
         response = self.authenticated_client(self.staff).post(

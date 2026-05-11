@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { UserProfile } from '../../../../core/models/user';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 import {
   getTodayIsoDate,
   hasText,
@@ -16,13 +17,14 @@ import {
 
 @Component({
   selector: 'app-user-profile',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, Modal],
   templateUrl: './user-profile.html',
 })
 export class UserProfileComponent implements OnInit {
   profile = signal<UserProfile | null>(null);
   loading = signal(false);
   saving = signal(false);
+  saveModalOpen = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
 
@@ -118,5 +120,18 @@ export class UserProfileComponent implements OnInit {
         this.saving.set(false);
       },
     });
+  }
+
+  requestSaveProfile() {
+    this.saveModalOpen.set(true);
+  }
+
+  closeSaveModal() {
+    this.saveModalOpen.set(false);
+  }
+
+  confirmSaveProfile() {
+    this.closeSaveModal();
+    this.saveProfile();
   }
 }

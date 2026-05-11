@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Loan } from '../../../../core/models/loan';
 import { ApiService } from '../../../../core/services/api.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-loan-list',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Modal],
   templateUrl: './loan-list.html',
   styleUrl: './loan-list.css',
 })
@@ -14,8 +15,10 @@ export class LoanList implements OnInit {
   activeFilter: Loan['status'] | 'all' = 'all';
   loans = signal<Loan[]>([]);
   loading = signal(false);
+  returnModalOpen = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
+  pendingReturnLoanId = signal<number | null>(null);
 
   filters: { label: string; value: Loan['status'] | 'all' }[] = [
     { label: 'Wszystkie', value: 'all' },
@@ -60,6 +63,26 @@ export class LoanList implements OnInit {
       next: () => this.loadLoans(),
       error: () => this.error.set('Nie udało się zwrócić książki.'),
     });
+  }
+
+  requestReturnLoan(id: number) {
+    this.pendingReturnLoanId.set(id);
+    this.returnModalOpen.set(true);
+  }
+
+  closeReturnModal() {
+    this.returnModalOpen.set(false);
+    this.pendingReturnLoanId.set(null);
+  }
+
+  confirmReturnLoan() {
+    const id = this.pendingReturnLoanId();
+    if (id === null) {
+      return;
+    }
+
+    this.closeReturnModal();
+    this.returnLoan(id);
   }
 
   getStatusClasses(status: Loan['status']): string {

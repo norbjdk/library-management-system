@@ -264,9 +264,38 @@ class ReservationSerializer(serializers.ModelSerializer):
             "queue_position",
             "estimated_ready_date",
         ]
+        extra_kwargs = {
+            "user": {"required": False},
+        }
+        validators = []
 
     def get_user_name(self, obj):
         return obj.user.full_name
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        book = attrs.get("book") or getattr(self.instance, "book", None)
+        user = attrs.get("user")
+
+        if user is None and request is not None:
+            principal = getattr(request, "user", None)
+            if getattr(principal, "is_authenticated", False):
+                user = LibraryUser.objects.filter(pk=principal.id).first()
+
+        if book is not None and user is not None:
+            queryset = Reservation.objects.filter(book=book, user=user)
+            if self.instance is not None:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.exists():
+                raise serializers.ValidationError(
+                    {
+                        "non_field_errors": [
+                            "Masz już rezerwację tej książki. Sprawdź jej status w kolejce."
+                        ]
+                    }
+                )
+
+        return attrs
 
     def get_queue_position(self, obj):
         return calculate_reservation_queue_position(obj)

@@ -2,16 +2,21 @@ export interface Author {
   id: number;
   first_name: string;
   last_name: string;
+  birthdate?: string | null;
+  nationality?: string | null;
 }
 
 export interface Category {
   id: number;
   name: string;
+  description?: string | null;
 }
 
 export interface Publisher {
   id: number;
   name: string;
+  city?: string | null;
+  country?: string | null;
 }
 
 export interface Location {

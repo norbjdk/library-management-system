@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Q, Sum
@@ -339,6 +340,44 @@ class LoanViewSet(viewsets.ModelViewSet):
             )
         instance.copy.mark_available()
         instance.delete()
+
+    @action(detail=False, methods=["post"], url_path="borrow-book")
+    def borrow_book(self, request):
+        user = getattr(request, "user", None)
+        if not getattr(user, "is_authenticated", False):
+            raise PermissionDenied("Musisz być zalogowany, aby wypożyczyć książkę.")
+
+        raw_book_id = request.data.get("book")
+        if raw_book_id in {None, ""}:
+            raise ValidationError({"book": "Wskaż książkę do wypożyczenia."})
+
+        try:
+            book_id = int(raw_book_id)
+        except (TypeError, ValueError) as error:
+            raise ValidationError(
+                {"book": "Identyfikator książki jest niepoprawny."}
+            ) from error
+
+        due_date = request.data.get("due_date") or (
+            timezone.localdate() + timedelta(days=14)
+        )
+        book = get_object_or_404(Book, pk=book_id)
+        available_copy = book.next_available_copy()
+        if available_copy is None:
+            raise ValidationError(
+                {"book": "Ta książka nie ma teraz dostępnych egzemplarzy."}
+            )
+
+        loan = Loan.objects.create(
+            copy=available_copy,
+            user_id=user.id,
+            loan_date=timezone.localdate(),
+            due_date=due_date,
+            status=LoanStatus.ACTIVE,
+        )
+        available_copy.mark_unavailable()
+
+        return Response(self.get_serializer(loan).data, status=201)
 
     @action(detail=True, methods=["post"])
     def return_loan(self, request, pk=None):

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Book } from '../../../../core/models/book';
 import { Order } from '../../../../core/models/order';
 import { ApiService } from '../../../../core/services/api.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 import {
   hasText,
   isPositiveInteger,
@@ -13,7 +14,7 @@ import {
 
 @Component({
   selector: 'app-order-list',
-  imports: [FormsModule],
+  imports: [FormsModule, Modal],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
 })
@@ -24,8 +25,12 @@ export class OrderList implements OnInit {
   loading = signal(false);
   creating = signal(false);
   showCreateForm = signal(false);
+  actionModalOpen = signal(false);
+  actionModalTitle = signal('');
+  actionModalDescription = signal('');
   error = signal<string | null>(null);
   count = signal(0);
+  private pendingAction: (() => void) | null = null;
 
   orderForm = {
     bookId: '',
@@ -155,11 +160,27 @@ export class OrderList implements OnInit {
     });
   }
 
+  requestCreateOrder() {
+    this.openActionModal(
+      'Utworzyć zamówienie?',
+      'Nowe zamówienie pojawi się na liście ze statusem szkicu.',
+      () => this.createOrder(),
+    );
+  }
+
   submitOrder(id: number) {
     this.api.submitOrder(id).subscribe({
       next: () => this.loadOrders(),
       error: () => this.error.set('Nie udało się złożyć zamówienia.'),
     });
+  }
+
+  requestSubmitOrder(id: number) {
+    this.openActionModal(
+      'Złożyć zamówienie?',
+      'Po zatwierdzeniu zamówienie przejdzie do realizacji.',
+      () => this.submitOrder(id),
+    );
   }
 
   receiveOrder(id: number) {
@@ -169,11 +190,45 @@ export class OrderList implements OnInit {
     });
   }
 
+  requestReceiveOrder(id: number) {
+    this.openActionModal(
+      'Potwierdzić odbiór?',
+      'Zamówienie zostanie oznaczone jako odebrane.',
+      () => this.receiveOrder(id),
+    );
+  }
+
   cancelOrder(id: number) {
     this.api.cancelOrder(id).subscribe({
       next: () => this.loadOrders(),
       error: () => this.error.set('Nie udało się anulować zamówienia.'),
     });
+  }
+
+  requestCancelOrder(id: number) {
+    this.openActionModal(
+      'Anulować zamówienie?',
+      'Tej operacji nie można cofnąć z poziomu listy zamówień.',
+      () => this.cancelOrder(id),
+    );
+  }
+
+  openActionModal(title: string, description: string, action: () => void) {
+    this.actionModalTitle.set(title);
+    this.actionModalDescription.set(description);
+    this.pendingAction = action;
+    this.actionModalOpen.set(true);
+  }
+
+  closeActionModal() {
+    this.actionModalOpen.set(false);
+    this.pendingAction = null;
+  }
+
+  confirmActionModal() {
+    const action = this.pendingAction;
+    this.closeActionModal();
+    action?.();
   }
 
   getStatusClasses(status: Order['status']): string {

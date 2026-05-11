@@ -64,6 +64,19 @@ class CirculationApiTests(LibraryAPITestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_reader_can_borrow_available_book_with_quick_action(self):
+        response = self.authenticated_client(self.reader).post(
+            reverse("loan-borrow-book"),
+            {"book": self.book.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.available_copy.refresh_from_db()
+        self.assertFalse(self.available_copy.available)
+        self.assertEqual(response.data["book_id"], self.book.id)
+        self.assertEqual(response.data["user"], self.reader.id)
+
     def test_mark_overdue_updates_loan_status(self):
         response = self.authenticated_client(self.staff).post(
             reverse("loan-mark-overdue", args=[self.loan.id])

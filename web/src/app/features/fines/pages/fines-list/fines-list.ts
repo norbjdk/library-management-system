@@ -1,10 +1,11 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { Fine } from '../../../../core/models/fine';
 import { ApiService } from '../../../../core/services/api.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-fines-list',
-  imports: [],
+  imports: [Modal],
   templateUrl: './fines-list.html',
   styleUrl: './fines-list.css',
 })
@@ -12,8 +13,10 @@ export class FinesList implements OnInit {
   activeFilter: 'all' | 'paid' | 'unpaid' = 'all';
   fines = signal<Fine[]>([]);
   loading = signal(false);
+  actionModalOpen = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
+  pendingFineId = signal<number | null>(null);
 
   filters: { label: string; value: 'all' | 'paid' | 'unpaid' }[] = [
     { label: 'Wszystkie', value: 'all' },
@@ -58,5 +61,25 @@ export class FinesList implements OnInit {
       next: () => this.loadFines(),
       error: () => this.error.set('Nie udało się rozliczyć kary.'),
     });
+  }
+
+  requestSettleFine(id: number) {
+    this.pendingFineId.set(id);
+    this.actionModalOpen.set(true);
+  }
+
+  closeActionModal() {
+    this.actionModalOpen.set(false);
+    this.pendingFineId.set(null);
+  }
+
+  confirmSettleFine() {
+    const id = this.pendingFineId();
+    if (id === null) {
+      return;
+    }
+
+    this.closeActionModal();
+    this.settleFine(id);
   }
 }

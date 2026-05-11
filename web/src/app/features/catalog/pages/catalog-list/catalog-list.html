@@ -26,6 +26,12 @@
   </div>
   }
 
+  @if (success()) {
+  <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl">
+    {{ success() }}
+  </div>
+  }
+
   @if (loading()) {
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @for (i of [1,2,3,4,5,6]; track i) {
@@ -45,51 +51,56 @@
   @if (!loading()) {
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @for (book of books(); track book.id) {
-    <article class="panel-card p-5 hover:-translate-y-0.5 transition-transform">
-      <div class="flex items-start justify-between gap-2 mb-3">
-        <div>
-          <h3 class="font-semibold text-slate-800 leading-tight">{{ book.title }}</h3>
-          <p class="text-sm text-slate-500 mt-0.5">{{ getPrimaryAuthor(book) }}</p>
+    <article class="panel-card p-5 hover:-translate-y-0.5 transition-transform catalog-card flex flex-col">
+      <div class="catalog-card-content flex-1">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div class="min-w-0">
+            <h3 class="font-semibold text-slate-800 leading-tight catalog-card-title">{{ book.title }}</h3>
+            <p class="text-sm text-slate-500 mt-0.5">{{ getPrimaryAuthor(book) }}</p>
+          </div>
+          <span class="shrink-0 text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(book) }}">
+            {{ getStatusLabel(book) }}
+          </span>
         </div>
-        <span class="shrink-0 text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(book) }}">
-          {{ getStatusLabel(book) }}
-        </span>
+
+        <div class="space-y-1.5 text-xs text-slate-500">
+          <div class="flex justify-between">
+            <span>Kategoria</span>
+            <span class="font-medium text-slate-700">{{ getPrimaryCategory(book) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Wydawca</span>
+            <span class="font-medium text-slate-700">{{ getPublisherName(book) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>EAN</span>
+            <span class="font-medium text-slate-700">{{ book.ean ?? '—' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Dostępne egz.</span>
+            <span class="font-medium text-slate-700">{{ getAvailableCopies(book) }} / {{ getTotalCopies(book) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Szacowany czas</span>
+            <span class="font-medium text-slate-700">{{ getWaitLabel(book) }}</span>
+          </div>
+        </div>
       </div>
 
-      <div class="space-y-1.5 text-xs text-slate-500">
-        <div class="flex justify-between">
-          <span>Kategoria</span>
-          <span class="font-medium text-slate-700">{{ getPrimaryCategory(book) }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>Wydawca</span>
-          <span class="font-medium text-slate-700">{{ getPublisherName(book) }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>EAN</span>
-          <span class="font-medium text-slate-700">{{ book.ean ?? '—' }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>Dostępne egz.</span>
-          <span class="font-medium text-slate-700">{{ getAvailableCopies(book) }} / {{ getTotalCopies(book) }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>Szacowany czas</span>
-          <span class="font-medium text-slate-700">{{ getWaitLabel(book) }}</span>
-        </div>
-      </div>
-
-      <div class="mt-4 flex gap-2">
-        <a [routerLink]="['/catalog', book.id]" class="flex-1 secondary-button text-center text-xs !py-2.5">
+      <div class="mt-4 flex flex-col sm:flex-row gap-2 catalog-card-actions">
+        <a [routerLink]="['/catalog', book.id]"
+          class="w-full sm:flex-1 sm:min-w-0 secondary-button text-center text-xs !py-2.5">
           Szczegóły
         </a>
         @if (getStatus(book) === 'available') {
-        <a [routerLink]="['/catalog', book.id]" class="flex-1 accent-button text-center text-xs !py-2.5">
-          Zobacz egzemplarze
-        </a>
+        <button type="button" class="w-full sm:flex-1 sm:min-w-0 accent-button text-center text-xs !py-2.5"
+          [disabled]="isBorrowing(book.id)" (click)="openBorrowModal(book)">
+          {{ isBorrowing(book.id) ? 'Wypożyczanie...' : 'Wypożycz teraz' }}
+        </button>
         }
         @if (getStatus(book) === 'unavailable') {
-        <a [routerLink]="['/catalog', book.id]" class="flex-1 accent-button text-center text-xs !py-2.5">
+        <a [routerLink]="['/catalog', book.id]"
+          class="w-full sm:flex-1 sm:min-w-0 accent-button text-center text-xs !py-2.5">
           Zarezerwuj
         </a>
         }
@@ -105,4 +116,12 @@
     }
   </div>
   }
+
+  <app-modal [open]="borrowModalOpen()" title="Potwierdź wypożyczenie"
+    description="Książka zostanie od razu przypisana do Twojego konta czytelnika." (closed)="closeBorrowModal()">
+    <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+      <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeBorrowModal()">Anuluj</button>
+      <button type="button" class="accent-button w-full sm:w-auto" (click)="confirmBorrow()">Potwierdź</button>
+    </div>
+  </app-modal>
 </div>

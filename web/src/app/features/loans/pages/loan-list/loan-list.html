@@ -67,7 +67,8 @@
                 Szczegóły
               </a>
               @if (loan.status === 'active' || loan.status === 'overdue') {
-              <button (click)="returnLoan(loan.id)" class="text-xs text-green-600 hover:text-green-800 underline">
+              <button (click)="requestReturnLoan(loan.id)"
+                class="text-xs text-green-600 hover:text-green-800 underline">
                 Zwróć
               </button>
               }
@@ -87,4 +88,12 @@
     </table>
   </div>
   }
+
+  <app-modal [open]="returnModalOpen()" title="Potwierdź zwrot książki"
+    description="Wypożyczenie zostanie zamknięte i egzemplarz wróci do puli dostępnych." (closed)="closeReturnModal()">
+    <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+      <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeReturnModal()">Anuluj</button>
+      <button type="button" class="accent-button w-full sm:w-auto" (click)="confirmReturnLoan()">Zwróć</button>
+    </div>
+  </app-modal>
 </div>

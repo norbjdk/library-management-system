@@ -7,11 +7,16 @@
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
+  min-width: 0;
+  max-width: 100%;
   min-height: 2.85rem;
   padding: 0.8rem 1.2rem;
   border-radius: 999px;
   border: 1px solid transparent;
   font-weight: 700;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition:
     transform 160ms ease,

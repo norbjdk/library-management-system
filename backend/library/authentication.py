@@ -109,15 +109,16 @@ class LibraryTokenAuthentication(BaseAuthentication):
 
     def authenticate(self, request):
         header = get_authorization_header(request).split()
+        from_header = bool(header)
 
         token: str | None = None
 
-        if not header:
+        if not from_header:
             token = request.COOKIES.get(ACCESS_COOKIE_NAME)
             if not token:
                 return None
 
-        if header:
+        if from_header:
             if len(header) != 2:
                 raise AuthenticationFailed("Invalid authorization header.")
 
@@ -130,17 +131,33 @@ class LibraryTokenAuthentication(BaseAuthentication):
         if token is None:
             return None
 
-        payload = _load_token(token, max_age=ACCESS_TOKEN_LIFETIME_SECONDS)
+        try:
+            payload = _load_token(token, max_age=ACCESS_TOKEN_LIFETIME_SECONDS)
+        except AuthenticationFailed:
+            if from_header:
+                raise
+            return None
+
         if payload.get("token_type") != "access":
-            raise AuthenticationFailed("Expected an access token.")
+            if from_header:
+                raise AuthenticationFailed("Expected an access token.")
+            return None
 
         user_id = payload.get("user_id")
         if user_id is None:
-            raise AuthenticationFailed("Authentication token payload is incomplete.")
+            if from_header:
+                raise AuthenticationFailed(
+                    "Authentication token payload is incomplete."
+                )
+            return None
 
         user = LibraryUser.objects.filter(pk=user_id).first()
         if user is None:
-            raise AuthenticationFailed("User linked to this token no longer exists.")
+            if from_header:
+                raise AuthenticationFailed(
+                    "User linked to this token no longer exists."
+                )
+            return None
 
         return LibraryPrincipal.from_user(user), token
 

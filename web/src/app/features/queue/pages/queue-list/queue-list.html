@@ -74,13 +74,13 @@
                             <div class="flex gap-3 flex-wrap">
                                 @if (reservation.status === 'pending') {
                                 <button type="button" class="text-xs text-rose-600 hover:text-rose-800 underline"
-                                    (click)="cancelReservation(reservation.id)">
+                                    (click)="requestCancelReservation(reservation.id)">
                                     Anuluj
                                 </button>
                                 }
                                 @if (isStaff() && reservation.status === 'pending') {
                                 <button type="button" class="text-xs text-emerald-600 hover:text-emerald-800 underline"
-                                    (click)="fulfillReservation(reservation.id)">
+                                    (click)="requestFulfillReservation(reservation.id)">
                                     Zrealizuj
                                 </button>
                                 }
@@ -101,4 +101,13 @@
         </div>
     </div>
     }
+
+    <app-modal [open]="actionModalOpen()" [title]="actionModalTitle()" [description]="actionModalDescription()"
+        (closed)="closeActionModal()">
+        <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeActionModal()">Anuluj</button>
+            <button type="button" class="accent-button w-full sm:w-auto"
+                (click)="confirmActionModal()">Potwierdź</button>
+        </div>
+    </app-modal>
 </div>

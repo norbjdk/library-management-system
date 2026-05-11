@@ -1,10 +1,11 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { Notification, NotificationType } from '../../../../core/models/notification';
 import { ApiService } from '../../../../core/services/api.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-notifications-list',
-  imports: [],
+  imports: [Modal],
   templateUrl: './notifications-list.html',
   styleUrl: './notifications-list.css',
 })
@@ -12,6 +13,7 @@ export class NotificationsList implements OnInit {
   activeFilter: 'all' | 'unread' | 'read' = 'all';
   notifications = signal<Notification[]>([]);
   loading = signal(false);
+  markAllModalOpen = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
 
@@ -65,6 +67,19 @@ export class NotificationsList implements OnInit {
       next: () => this.loadNotifications(),
       error: () => this.error.set('Nie udało się oznaczyć wszystkich powiadomień.'),
     });
+  }
+
+  requestMarkAllRead() {
+    this.markAllModalOpen.set(true);
+  }
+
+  closeMarkAllModal() {
+    this.markAllModalOpen.set(false);
+  }
+
+  confirmMarkAllRead() {
+    this.closeMarkAllModal();
+    this.markAllRead();
   }
 
   getTypeLabel(type: Notification['notification_type']): string {

@@ -3,12 +3,40 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.urls import reverse
-from library.models import Fine, LibraryRole
+from library.models import Fine, LibraryRole, LibraryUser
 
 from .base import LibraryAPITestCase
 
 
 class AuthenticationApiTests(LibraryAPITestCase):
+    def test_register_ignores_stale_access_cookie_for_deleted_user(self):
+        ghost_user = LibraryUser.objects.create(
+            first_name="Ghost",
+            last_name="Reader",
+            email="ghost.reader@library.com",
+            birthdate="1999-01-01",
+            password="passwd",
+            role=LibraryRole.READER,
+        )
+        access_token = self.token_pair(ghost_user)["access_token"]
+        ghost_user.delete()
+        self.client.cookies["library_access_token"] = access_token
+
+        response = self.client.post(
+            reverse("auth-register"),
+            {
+                "email": "recover.reader@library.com",
+                "password": "passwd",
+                "first_name": "Recover",
+                "last_name": "Reader",
+                "birthdate": "2001-04-10",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["user"]["email"], "recover.reader@library.com")
+
     def test_register_creates_reader_and_returns_token_pair(self):
         response = self.client.post(
             reverse("auth-register"),

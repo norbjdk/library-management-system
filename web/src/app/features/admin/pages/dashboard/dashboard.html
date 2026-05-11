@@ -33,6 +33,42 @@
         }
     </div>
 
+    <section class="panel-card overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-800">Użytkownicy</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                        <th class="px-6 py-3 text-left">Imię i nazwisko</th>
+                        <th class="px-6 py-3 text-left">Email</th>
+                        <th class="px-6 py-3 text-left">Rola</th>
+                        <th class="px-6 py-3 text-left">Wypożyczenia</th>
+                        <th class="px-6 py-3 text-left">Rezerwacje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (reader of readers(); track reader.id) {
+                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-slate-800">{{ reader.full_name ?? (reader.first_name + ' '
+                            + reader.last_name) }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ reader.email }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ reader.role }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ reader.loan_count ?? 0 }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ reader.reservation_count ?? 0 }}</td>
+                    </tr>
+                    }
+                    @empty {
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-slate-400 text-sm">Brak użytkowników.</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <div class="panel-card">
         <div class="px-6 py-4 border-b border-slate-100">
             <h2 class="font-semibold text-slate-800">Ostatnie wypożyczenia</h2>
@@ -73,6 +109,305 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Autorzy</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Imię i nazwisko</th>
+                            <th class="px-6 py-3 text-left">Data urodzenia</th>
+                            <th class="px-6 py-3 text-left">Narodowość</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (author of authors(); track author.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ author.first_name }} {{ author.last_name
+                                }}</td>
+                            <td class="px-6 py-4 text-slate-500">{{ author.birthdate ?? '—' }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ author.nationality ?? '—' }}</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="3" class="px-6 py-10 text-center text-slate-400 text-sm">Brak autorów.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Wydawcy</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Nazwa</th>
+                            <th class="px-6 py-3 text-left">Miasto</th>
+                            <th class="px-6 py-3 text-left">Kraj</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (publisher of publishers(); track publisher.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ publisher.name }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ publisher.city ?? '—' }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ publisher.country ?? '—' }}</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="3" class="px-6 py-10 text-center text-slate-400 text-sm">Brak wydawców.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Kategorie</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Nazwa</th>
+                            <th class="px-6 py-3 text-left">Opis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (category of categories(); track category.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ category.name }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ category.description ?? '—' }}</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="2" class="px-6 py-10 text-center text-slate-400 text-sm">Brak kategorii.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Lokalizacje</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Półka</th>
+                            <th class="px-6 py-3 text-left">Sekcja</th>
+                            <th class="px-6 py-3 text-left">Piętro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (location of locations(); track location.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ location.shelf }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ location.section }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ location.floor }}</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="3" class="px-6 py-10 text-center text-slate-400 text-sm">Brak lokalizacji.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <section class="panel-card overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-800">Egzemplarze</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Książka</th>
+                        <th class="px-6 py-3 text-left">Lokalizacja</th>
+                        <th class="px-6 py-3 text-left">Stan</th>
+                        <th class="px-6 py-3 text-left">Dostępność</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (copy of copies(); track copy.id) {
+                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 text-slate-400">#{{ copy.id }}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">{{ copy.book_title ?? '—' }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ copy.location_label ?? '—' }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ getCopyConditionLabel(copy.condition) }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ copy.available ? 'Dostępny' : 'Niedostępny' }}</td>
+                    </tr>
+                    }
+                    @empty {
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-slate-400 text-sm">Brak egzemplarzy.</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Ostatnie rezerwacje</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Czytelnik</th>
+                            <th class="px-6 py-3 text-left">Książka</th>
+                            <th class="px-6 py-3 text-left">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (reservation of reservations(); track reservation.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ reservation.user_name }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ reservation.book_title }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ getReservationStatusLabel(reservation.status) }}
+                            </td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="3" class="px-6 py-10 text-center text-slate-400 text-sm">Brak rezerwacji.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Ostatnie kary</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Czytelnik</th>
+                            <th class="px-6 py-3 text-left">Wypożyczenie</th>
+                            <th class="px-6 py-3 text-left">Kwota</th>
+                            <th class="px-6 py-3 text-left">Pozostało</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (fine of fines(); track fine.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ fine.user_name }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ fine.loan_summary }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ fine.amount }} PLN</td>
+                            <td class="px-6 py-4 text-slate-600">{{ fine.remaining_amount }} PLN</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Brak kar.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Ostatnie zamówienia</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Książka</th>
+                            <th class="px-6 py-3 text-left">Dostawca</th>
+                            <th class="px-6 py-3 text-left">Status</th>
+                            <th class="px-6 py-3 text-left">Notatka</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (order of orders(); track order.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ order.book_title }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ order.supplier }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ getOrderStatusLabel(order.status) }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ order.notes || '—' }}</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Brak zamówień.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel-card overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-800">Ostatnie powiadomienia</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Użytkownik</th>
+                            <th class="px-6 py-3 text-left">Typ</th>
+                            <th class="px-6 py-3 text-left">Tytuł</th>
+                            <th class="px-6 py-3 text-left">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (notification of notifications(); track notification.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 font-medium text-slate-800">{{ notification.user_name }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{
+                                getNotificationTypeLabel(notification.notification_type) }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ notification.title }}</td>
+                            <td class="px-6 py-4 text-slate-600">{{ notification.is_read ? 'Przeczytane' :
+                                'Nieprzeczytane' }}</td>
+                        </tr>
+                        }
+                        @empty {
+                        <tr>
+                            <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Brak powiadomień.</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
     }
 </div>

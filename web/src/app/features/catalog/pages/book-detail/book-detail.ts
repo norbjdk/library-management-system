@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 import { Book, BookAvailability, Copy } from '../../../../core/models/book';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 import {
   getTodayIsoDate,
   hasText,
@@ -15,7 +16,7 @@ import {
 
 @Component({
   selector: 'app-book-detail',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, Modal],
   templateUrl: './book-detail.html',
   styleUrl: './book-detail.css',
 })
@@ -23,8 +24,12 @@ export class BookDetail implements OnInit {
   book = signal<Book | null>(null);
   availability = signal<BookAvailability | null>(null);
   copies = signal<Copy[]>([]);
+  hasExistingReservation = signal(false);
   loading = signal(false);
+  borrowing = signal(false);
   submittingReservation = signal(false);
+  borrowModalOpen = signal(false);
+  reserveModalOpen = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
 
@@ -61,11 +66,13 @@ export class BookDetail implements OnInit {
       book: this.api.getBook(bookId),
       availability: this.api.getBookAvailability(bookId),
       copies: this.api.getCopies({ book: String(bookId) }),
+      reservations: this.api.getReservations({ book: String(bookId) }),
     }).subscribe({
-      next: ({ book, availability, copies }) => {
+      next: ({ book, availability, copies, reservations }) => {
         this.book.set(book);
         this.availability.set(availability);
         this.copies.set(copies.results);
+        this.hasExistingReservation.set(reservations.results.length > 0);
         this.loading.set(false);
       },
       error: () => {
@@ -99,12 +106,18 @@ export class BookDetail implements OnInit {
       return;
     }
 
+    if (this.hasExistingReservation()) {
+      this.error.set('Masz już rezerwację tej książki. Sprawdź jej status w kolejce.');
+      return;
+    }
+
     this.submittingReservation.set(true);
     this.error.set(null);
 
     this.api
       .createReservation({
         book: currentBook.id,
+        user: this.auth.user()?.id,
         expiry_date: reservationExpiry,
       })
       .subscribe({
@@ -114,15 +127,82 @@ export class BookDetail implements OnInit {
           this.loadBook(currentBook.id);
         },
         error: (err) => {
+          const duplicateReservationMessage =
+            err?.error?.non_field_errors?.[0]?.includes('unique set') ||
+            err?.error?.non_field_errors?.[0]?.includes('Masz już rezerwację')
+              ? 'Masz już rezerwację tej książki. Sprawdź jej status w kolejce.'
+              : null;
           this.error.set(
             err?.error?.detail ??
               err?.error?.expiry_date?.[0] ??
+              duplicateReservationMessage ??
               err?.error?.non_field_errors?.[0] ??
               'Nie udało się utworzyć rezerwacji.',
           );
           this.submittingReservation.set(false);
         },
       });
+  }
+
+  requestBorrowConfirmation() {
+    this.borrowModalOpen.set(true);
+  }
+
+  closeBorrowModal() {
+    this.borrowModalOpen.set(false);
+  }
+
+  confirmBorrow() {
+    this.closeBorrowModal();
+    this.borrowBook();
+  }
+
+  requestReservationConfirmation() {
+    this.reserveModalOpen.set(true);
+  }
+
+  closeReservationModal() {
+    this.reserveModalOpen.set(false);
+  }
+
+  confirmReservation() {
+    this.closeReservationModal();
+    this.reserveBook();
+  }
+
+  borrowBook() {
+    const currentBook = this.book();
+    if (!currentBook) {
+      return;
+    }
+
+    this.borrowing.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.api.borrowBook(currentBook.id).subscribe({
+      next: () => {
+        this.success.set('Książka została wypożyczona i przypisana do Twojego konta.');
+        this.borrowing.set(false);
+        this.loadBook(currentBook.id);
+      },
+      error: (err) => {
+        this.error.set(
+          err?.error?.detail ?? err?.error?.book?.[0] ?? 'Nie udało się wypożyczyć książki.',
+        );
+        this.borrowing.set(false);
+      },
+    });
+  }
+
+  hasAvailableCopies(): boolean {
+    const availability = this.availability();
+    if (availability) {
+      return availability.available_copies > 0;
+    }
+
+    const currentBook = this.book();
+    return (currentBook?.available_copies ?? 0) > 0;
   }
 
   isStaff(): boolean {

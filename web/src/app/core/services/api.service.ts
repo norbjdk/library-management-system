@@ -3,7 +3,15 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { Book, BookAvailability, Copy } from '../models/book';
+import {
+  Author,
+  Book,
+  BookAvailability,
+  Category,
+  Copy,
+  Location,
+  Publisher,
+} from '../models/book';
 import { Fine } from '../models/fine';
 import { Loan } from '../models/loan';
 import { Notification } from '../models/notification';
@@ -47,6 +55,38 @@ export class ApiService {
     return this.http.get<Book>(`${this.base}/catalog/books/${id}/`);
   }
 
+  getAuthors(params?: Record<string, string>): Observable<PaginatedResponse<Author>> {
+    return this.http
+      .get<PaginatedResponse<Author> | Author[]>(`${this.base}/catalog/authors/`, {
+        params: this.buildParams(params),
+      })
+      .pipe(map((response) => this.normalizeCollection(response)));
+  }
+
+  getPublishers(params?: Record<string, string>): Observable<PaginatedResponse<Publisher>> {
+    return this.http
+      .get<PaginatedResponse<Publisher> | Publisher[]>(`${this.base}/catalog/publishers/`, {
+        params: this.buildParams(params),
+      })
+      .pipe(map((response) => this.normalizeCollection(response)));
+  }
+
+  getCategories(params?: Record<string, string>): Observable<PaginatedResponse<Category>> {
+    return this.http
+      .get<PaginatedResponse<Category> | Category[]>(`${this.base}/catalog/categories/`, {
+        params: this.buildParams(params),
+      })
+      .pipe(map((response) => this.normalizeCollection(response)));
+  }
+
+  getLocations(params?: Record<string, string>): Observable<PaginatedResponse<Location>> {
+    return this.http
+      .get<PaginatedResponse<Location> | Location[]>(`${this.base}/catalog/locations/`, {
+        params: this.buildParams(params),
+      })
+      .pipe(map((response) => this.normalizeCollection(response)));
+  }
+
   getBookAvailability(id: number): Observable<BookAvailability> {
     return this.http.get<BookAvailability>(`${this.base}/catalog/books/${id}/availability/`);
   }
@@ -73,6 +113,13 @@ export class ApiService {
 
   createLoan(data: Partial<Loan>): Observable<Loan> {
     return this.http.post<Loan>(`${this.base}/loans/`, data);
+  }
+
+  borrowBook(bookId: number, dueDate?: string): Observable<Loan> {
+    return this.http.post<Loan>(`${this.base}/loans/borrow-book/`, {
+      book: bookId,
+      due_date: dueDate,
+    });
   }
 
   returnLoan(id: number): Observable<Loan> {

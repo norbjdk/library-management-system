@@ -9,3 +9,34 @@
 :host input {
   min-width: 0;
 }
+
+:host .catalog-card {
+  min-height: 320px;
+}
+
+:host .catalog-card-title {
+  min-height: 3.5rem;
+}
+
+:host .catalog-card-actions {
+  align-items: stretch;
+}
+
+:host .catalog-card-actions .accent-button,
+:host .catalog-card-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  :host .catalog-card-actions .accent-button,
+  :host .catalog-card-actions .secondary-button {
+    width: auto;
+  }
+}

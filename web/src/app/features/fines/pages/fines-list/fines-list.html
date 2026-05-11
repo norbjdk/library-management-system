@@ -66,7 +66,7 @@
                     </td>
                     <td class="px-6 py-4">
                         @if (!fine.paid) {
-                        <button (click)="settleFine(fine.id)"
+                        <button (click)="requestSettleFine(fine.id)"
                             class="text-xs text-green-600 hover:text-green-800 underline">
                             Rozlicz
                         </button>
@@ -86,4 +86,12 @@
         </table>
     </div>
     }
+
+    <app-modal [open]="actionModalOpen()" title="Potwierdź rozliczenie kary"
+        description="Po zatwierdzeniu kara zostanie oznaczona jako opłacona." (closed)="closeActionModal()">
+        <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeActionModal()">Anuluj</button>
+            <button type="button" class="accent-button w-full sm:w-auto" (click)="confirmSettleFine()">Rozlicz</button>
+        </div>
+    </app-modal>
 </div>

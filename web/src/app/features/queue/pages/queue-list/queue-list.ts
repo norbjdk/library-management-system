@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { Reservation } from '../../../../core/models/reservation';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-queue-list',
-  imports: [RouterLink],
+  imports: [RouterLink, Modal],
   templateUrl: './queue-list.html',
   styleUrl: './queue-list.css',
 })
@@ -14,8 +15,12 @@ export class QueueList implements OnInit {
   activeFilter: Reservation['status'] | 'all' = 'all';
   reservations = signal<Reservation[]>([]);
   loading = signal(false);
+  actionModalOpen = signal(false);
+  actionModalTitle = signal('');
+  actionModalDescription = signal('');
   error = signal<string | null>(null);
   count = signal(0);
+  private pendingAction: (() => void) | null = null;
 
   filters: { label: string; value: Reservation['status'] | 'all' }[] = [
     { label: 'Wszystkie', value: 'all' },
@@ -72,6 +77,14 @@ export class QueueList implements OnInit {
     });
   }
 
+  requestCancelReservation(id: number) {
+    this.openActionModal(
+      'Anulować rezerwację?',
+      'Rezerwacja zostanie usunięta z aktywnej kolejki.',
+      () => this.cancelReservation(id),
+    );
+  }
+
   fulfillReservation(id: number) {
     this.api.fulfillReservation(id).subscribe({
       next: () => this.loadReservations(),
@@ -79,6 +92,32 @@ export class QueueList implements OnInit {
         this.error.set(err?.error?.book?.[0] ?? 'Nie udało się zrealizować rezerwacji.');
       },
     });
+  }
+
+  requestFulfillReservation(id: number) {
+    this.openActionModal(
+      'Zrealizować rezerwację?',
+      'System oznaczy rezerwację jako gotową do odbioru dla czytelnika.',
+      () => this.fulfillReservation(id),
+    );
+  }
+
+  openActionModal(title: string, description: string, action: () => void) {
+    this.actionModalTitle.set(title);
+    this.actionModalDescription.set(description);
+    this.pendingAction = action;
+    this.actionModalOpen.set(true);
+  }
+
+  closeActionModal() {
+    this.actionModalOpen.set(false);
+    this.pendingAction = null;
+  }
+
+  confirmActionModal() {
+    const action = this.pendingAction;
+    this.closeActionModal();
+    action?.();
   }
 
   getStatusLabel(status: Reservation['status']): string {
