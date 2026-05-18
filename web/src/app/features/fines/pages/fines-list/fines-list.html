@@ -6,6 +6,12 @@
         </div>
     </div>
 
+    @if (!isStaff()) {
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        Rozliczenie kar odbywa się przy stanowisku bibliotekarza i nie jest dostępne z konta czytelnika.
+    </div>
+    }
+
     <div class="flex gap-2 flex-wrap">
         @for (filter of filters; track filter.value) {
         <button (click)="setFilter(filter.value)" class="px-3 py-2 rounded-lg text-sm transition-colors border
@@ -30,60 +36,73 @@
     }
 
     @if (!loading()) {
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
-                    <th class="px-6 py-3 text-left">ID</th>
-                    <th class="px-6 py-3 text-left">Użytkownik</th>
-                    <th class="px-6 py-3 text-left">Wypożyczenie</th>
-                    <th class="px-6 py-3 text-left">Kwota</th>
-                    <th class="px-6 py-3 text-left">Data wystawienia</th>
-                    <th class="px-6 py-3 text-left">Data zapłaty</th>
-                    <th class="px-6 py-3 text-left">Status</th>
-                    <th class="px-6 py-3 text-left">Akcje</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (fine of fines(); track fine.id) {
-                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-4 text-slate-400">#{{ fine.id }}</td>
-                    <td class="px-6 py-4 font-medium text-slate-800">Użytkownik #{{ fine.user }}</td>
-                    <td class="px-6 py-4 text-slate-600">Wypożyczenie #{{ fine.loan }}</td>
-                    <td class="px-6 py-4 font-medium text-slate-800">{{ fine.amount }} PLN</td>
-                    <td class="px-6 py-4 text-slate-500">{{ fine.issue_date }}</td>
-                    <td class="px-6 py-4 text-slate-500">{{ fine.paid_date ?? '—' }}</td>
-                    <td class="px-6 py-4">
-                        @if (fine.paid) {
-                        <span class="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">
-                            Opłacona
-                        </span>
-                        } @else {
-                        <span class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">
-                            Nieopłacona
-                        </span>
+    <div class="space-y-5">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Użytkownik</th>
+                        <th class="px-6 py-3 text-left">Wypożyczenie</th>
+                        <th class="px-6 py-3 text-left">Kwota</th>
+                        <th class="px-6 py-3 text-left">Pozostało</th>
+                        <th class="px-6 py-3 text-left">Data wystawienia</th>
+                        <th class="px-6 py-3 text-left">Data zapłaty</th>
+                        <th class="px-6 py-3 text-left">Status</th>
+                        @if (isStaff()) {
+                        <th class="px-6 py-3 text-left">Akcje</th>
                         }
-                    </td>
-                    <td class="px-6 py-4">
-                        @if (!fine.paid) {
-                        <button (click)="requestSettleFine(fine.id)"
-                            class="text-xs text-green-600 hover:text-green-800 underline">
-                            Rozlicz
-                        </button>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (fine of fines(); track fine.id) {
+                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 text-slate-400">#{{ fine.id }}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">{{ fine.user_name }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ fine.loan_summary }}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">{{ fine.amount }} PLN</td>
+                        <td class="px-6 py-4 text-slate-600">{{ fine.remaining_amount }} PLN</td>
+                        <td class="px-6 py-4 text-slate-500">{{ fine.issue_date }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ fine.paid_date ?? '—' }}</td>
+                        <td class="px-6 py-4">
+                            @if (fine.paid) {
+                            <span class="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">
+                                Opłacona
+                            </span>
+                            } @else {
+                            <span class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">
+                                Nieopłacona
+                            </span>
+                            }
+                        </td>
+                        @if (isStaff()) {
+                        <td class="px-6 py-4">
+                            @if (!fine.paid) {
+                            <button (click)="requestSettleFine(fine.id)"
+                                class="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100">
+                                Rozlicz
+                            </button>
+                            } @else {
+                            <span class="text-xs text-slate-400">—</span>
+                            }
+                        </td>
                         }
-                    </td>
-                </tr>
-                }
+                    </tr>
+                    }
 
-                @empty {
-                <tr>
-                    <td colspan="8" class="px-6 py-16 text-center text-slate-400 text-sm">
-                        Brak kar
-                    </td>
-                </tr>
-                }
-            </tbody>
-        </table>
+                    @empty {
+                    <tr>
+                        <td [attr.colspan]="isStaff() ? 9 : 8" class="px-6 py-16 text-center text-slate-400 text-sm">
+                            Brak kar
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="count()"
+            (pageChange)="setPage($event)" />
     </div>
     }
 

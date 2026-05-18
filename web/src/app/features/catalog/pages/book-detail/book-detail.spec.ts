@@ -9,8 +9,17 @@ describe('BookDetail', () => {
   let component: BookDetail;
   let fixture: ComponentFixture<BookDetail>;
   let api: jasmine.SpyObj<ApiService>;
+  let routeSnapshot: {
+    paramMap: ReturnType<typeof convertToParamMap>;
+    queryParamMap: ReturnType<typeof convertToParamMap>;
+  };
 
   beforeEach(async () => {
+    routeSnapshot = {
+      paramMap: convertToParamMap({ id: '1' }),
+      queryParamMap: convertToParamMap({}),
+    };
+
     api = jasmine.createSpyObj<ApiService>('ApiService', [
       'getBook',
       'getBookAvailability',
@@ -25,15 +34,21 @@ describe('BookDetail', () => {
         {
           provide: AuthService,
           useValue: {
+            isLoggedIn: () => true,
             isStaff: () => false,
+            user: () => ({
+              id: 2,
+              first_name: 'Anna',
+              last_name: 'Czytelnik',
+              role: 'reader',
+              is_staff: false,
+            }),
           },
         },
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: {
-              paramMap: convertToParamMap({ id: '1' }),
-            },
+            snapshot: routeSnapshot,
           },
         },
       ],
@@ -131,9 +146,50 @@ describe('BookDetail', () => {
 
     expect(api.createReservation).toHaveBeenCalledWith({
       book: 1,
+      user: 2,
       expiry_date: '2099-01-01',
     });
-    expect(fixture.nativeElement.textContent).toContain('Rezerwacja została zapisana w kolejce.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Rezerwacja została zapisana. Książkę będzie można odebrać w bibliotece po wydaniu przez bibliotekarza.',
+    );
+  });
+
+  it('opens the reservation modal when the catalog card requests it', () => {
+    routeSnapshot.queryParamMap = convertToParamMap({ reserve: '1' });
+
+    createComponent();
+
+    expect(component.reserveModalOpen()).toBeTrue();
+  });
+
+  it('auto-reserves when the catalog confirmation sends the detail view there', () => {
+    routeSnapshot.queryParamMap = convertToParamMap({ autoReserve: '1' });
+    api.createReservation.and.returnValue(
+      of({
+        id: 101,
+        user: 2,
+        user_name: 'Anna Czytelnik',
+        book: 1,
+        book_title: 'Solaris',
+        reservation_date: '2026-05-04',
+        expiry_date: '2099-01-01',
+        status: 'pending',
+        queue_position: 1,
+        estimated_ready_date: '2099-01-01',
+      }),
+    );
+
+    createComponent();
+
+    expect(api.createReservation).toHaveBeenCalled();
+    const payload = api.createReservation.calls.mostRecent().args[0] as {
+      book?: number;
+      user?: number;
+      expiry_date?: string;
+    };
+    expect(payload.book).toBe(1);
+    expect(payload.user).toBe(2);
+    expect(payload.expiry_date).toBe(component.reservationExpiry);
   });
 
   it('shows backend reservation errors in the view', () => {

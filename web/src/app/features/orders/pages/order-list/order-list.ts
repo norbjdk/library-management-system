@@ -2,8 +2,10 @@ import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Book } from '../../../../core/models/book';
 import { Order } from '../../../../core/models/order';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { ApiService } from '../../../../core/services/api.service';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
 import {
   hasText,
   isPositiveInteger,
@@ -14,11 +16,13 @@ import {
 
 @Component({
   selector: 'app-order-list',
-  imports: [FormsModule, Modal],
+  imports: [FormsModule, Modal, Pagination],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
 })
 export class OrderList implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   activeFilter: Order['status'] | 'all' = 'all';
   orders = signal<Order[]>([]);
   books = signal<Book[]>([]);
@@ -30,7 +34,11 @@ export class OrderList implements OnInit {
   actionModalDescription = signal('');
   error = signal<string | null>(null);
   count = signal(0);
+  currentPage = signal(1);
+  bookPage = signal(1);
+  bookCount = signal(0);
   private pendingAction: (() => void) | null = null;
+  bookSearch = '';
 
   orderForm = {
     bookId: '',
@@ -56,10 +64,20 @@ export class OrderList implements OnInit {
     this.loadBooks();
   }
 
-  loadBooks() {
-    this.api.getBooks().subscribe({
+  loadBooks(page = this.bookPage()) {
+    const params: Record<string, string> = { page: String(page) };
+    const searchQuery = normalizeText(this.bookSearch);
+    this.bookSearch = searchQuery;
+
+    if (searchQuery) {
+      params['q'] = searchQuery;
+    }
+
+    this.api.getBooks(params).subscribe({
       next: (response) => {
         this.books.set(response.results);
+        this.bookCount.set(response.count);
+        this.bookPage.set(page);
       },
       error: () => {
         this.error.set('Nie udało się pobrać listy książek do formularza zamówienia.');
@@ -67,17 +85,18 @@ export class OrderList implements OnInit {
     });
   }
 
-  loadOrders() {
+  loadOrders(page = this.currentPage()) {
     this.loading.set(true);
     this.error.set(null);
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(page) };
     if (this.activeFilter !== 'all') params['status'] = this.activeFilter;
 
     this.api.getOrders(params).subscribe({
       next: (response) => {
         this.orders.set(response.results);
         this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -89,7 +108,23 @@ export class OrderList implements OnInit {
 
   setFilter(filter: Order['status'] | 'all') {
     this.activeFilter = filter;
-    this.loadOrders();
+    this.currentPage.set(1);
+    this.loadOrders(1);
+  }
+
+  setPage(page: number) {
+    this.currentPage.set(page);
+    this.loadOrders(page);
+  }
+
+  searchBooks() {
+    this.bookPage.set(1);
+    this.loadBooks(1);
+  }
+
+  setBookPage(page: number) {
+    this.bookPage.set(page);
+    this.loadBooks(page);
   }
 
   toggleCreateForm() {
@@ -149,7 +184,8 @@ export class OrderList implements OnInit {
         };
         this.creating.set(false);
         this.showCreateForm.set(false);
-        this.loadOrders();
+        this.currentPage.set(1);
+        this.loadOrders(1);
       },
       error: (err) => {
         this.error.set(

@@ -37,7 +37,11 @@ export class Login {
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-  ) {}
+  ) {
+    if (this.route.snapshot.queryParamMap.get('mode') === 'register') {
+      this.mode.set('register');
+    }
+  }
 
   private resolvePostAuthRedirect(): string {
     return this.route.snapshot.queryParamMap.get('redirectTo') || '/catalog';

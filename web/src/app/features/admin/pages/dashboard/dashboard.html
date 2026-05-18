@@ -2,7 +2,7 @@
     <div class="page-header">
         <div>
             <p class="page-kicker">Panel bibliotekarza</p>
-            <h1 class="text-3xl text-slate-900">Dashboard operacyjny</h1>
+            <h1 class="text-3xl text-slate-900">Panel operacyjny</h1>
             <p class="page-subtitle mt-2">{{ getGreeting() }}</p>
         </div>
         <button type="button" class="secondary-button" (click)="loadDashboard()">Odśwież dane</button>
@@ -15,7 +15,7 @@
     }
 
     @if (loading()) {
-    <div class="panel-card p-8 text-center text-slate-500">Ładowanie danych dashboardu...</div>
+    <div class="panel-card p-8 text-center text-slate-500">Ładowanie danych panelu...</div>
     }
 
     @if (!loading()) {
@@ -54,7 +54,7 @@
                         <td class="px-6 py-4 font-medium text-slate-800">{{ reader.full_name ?? (reader.first_name + ' '
                             + reader.last_name) }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ reader.email }}</td>
-                        <td class="px-6 py-4 text-slate-600">{{ reader.role }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ getRoleLabel(reader.role) }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ reader.loan_count ?? 0 }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ reader.reservation_count ?? 0 }}</td>
                     </tr>
@@ -67,11 +67,15 @@
                 </tbody>
             </table>
         </div>
+        <div class="px-6 py-4 border-t border-slate-100">
+            <app-pagination [page]="getSectionPage('readers')" [pageSize]="pageSize"
+                [totalItems]="getSectionCount('readers')" (pageChange)="setSectionPage('readers', $event)" />
+        </div>
     </section>
 
     <div class="panel-card">
         <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-semibold text-slate-800">Ostatnie wypożyczenia</h2>
+            <h2 class="font-semibold text-slate-800">Wypożyczenia</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -109,6 +113,10 @@
                 </tbody>
             </table>
         </div>
+        <div class="px-6 py-4 border-t border-slate-100">
+            <app-pagination [page]="getSectionPage('loans')" [pageSize]="pageSize"
+                [totalItems]="getSectionCount('loans')" (pageChange)="setSectionPage('loans', $event)" />
+        </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -142,6 +150,10 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('authors')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('authors')" (pageChange)="setSectionPage('authors', $event)" />
+            </div>
         </section>
 
         <section class="panel-card overflow-hidden">
@@ -172,6 +184,10 @@
                         }
                     </tbody>
                 </table>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('publishers')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('publishers')" (pageChange)="setSectionPage('publishers', $event)" />
             </div>
         </section>
     </div>
@@ -204,6 +220,10 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('categories')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('categories')" (pageChange)="setSectionPage('categories', $event)" />
+            </div>
         </section>
 
         <section class="panel-card overflow-hidden">
@@ -234,6 +254,10 @@
                         }
                     </tbody>
                 </table>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('locations')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('locations')" (pageChange)="setSectionPage('locations', $event)" />
             </div>
         </section>
     </div>
@@ -271,6 +295,10 @@
                 </tbody>
             </table>
         </div>
+        <div class="px-6 py-4 border-t border-slate-100">
+            <app-pagination [page]="getSectionPage('copies')" [pageSize]="pageSize"
+                [totalItems]="getSectionCount('copies')" (pageChange)="setSectionPage('copies', $event)" />
+        </div>
     </section>
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -304,6 +332,11 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('reservations')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('reservations')"
+                    (pageChange)="setSectionPage('reservations', $event)" />
+            </div>
         </section>
 
         <section class="panel-card overflow-hidden">
@@ -336,6 +369,10 @@
                         }
                     </tbody>
                 </table>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('fines')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('fines')" (pageChange)="setSectionPage('fines', $event)" />
             </div>
         </section>
     </div>
@@ -372,6 +409,10 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('orders')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('orders')" (pageChange)="setSectionPage('orders', $event)" />
+            </div>
         </section>
 
         <section class="panel-card overflow-hidden">
@@ -406,6 +447,11 @@
                         }
                     </tbody>
                 </table>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <app-pagination [page]="getSectionPage('notifications')" [pageSize]="pageSize"
+                    [totalItems]="getSectionCount('notifications')"
+                    (pageChange)="setSectionPage('notifications', $event)" />
             </div>
         </section>
     </div>

@@ -2,10 +2,11 @@
   display: block;
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 40;
 }
 
 nav {
   position: sticky;
   top: 0;
+  min-height: var(--nav-height, 80px);
 }

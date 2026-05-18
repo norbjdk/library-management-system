@@ -13,8 +13,8 @@
 
     <div class="user-list-summary">
         <app-badge [label]="totalItems() + ' rekordów'" tone="info" />
-        <app-badge [label]="totalReaders() + ' czytelników'" tone="success" />
-        <app-badge [label]="totalStaff() + ' pracowników'" tone="warning" />
+        <app-badge [label]="visibleReaders() + ' czytelników w widoku'" tone="success" />
+        <app-badge [label]="visibleStaff() + ' pracowników w widoku'" tone="warning" />
     </div>
 
     <section class="panel-card p-6 space-y-5">
@@ -33,7 +33,7 @@
         <app-table [columns]="columns" [rows]="tableRows()" caption="Użytkownicy biblioteki"
             emptyLabel="Brak użytkowników spełniających aktualne kryteria." />
 
-        <app-pagination [page]="currentPage()" [pageSize]="8" [totalItems]="totalItems()"
+        <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="totalItems()"
             (pageChange)="setPage($event)" />
         }
     </section>

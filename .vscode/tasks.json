@@ -52,6 +52,19 @@
                 "cwd": "${workspaceFolder}/backend"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Web: start",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "start"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/web"
+            },
+            "isBackground": true,
+            "problemMatcher": []
         }
     ]
 }

@@ -88,8 +88,8 @@
             <app-button label="Zaksięguj zwrot" tone="primary" [busy]="returning()" [fullWidth]="true"
                 (pressed)="openReturnModal()" />
             } @else if (showReadOnlyNotice()) {
-            <app-alert tone="info" title="Tryb tylko do odczytu"
-                message="Czytelnik może przejrzeć szczegóły wypożyczenia, ale nie może go rozliczyć ani przedłużyć." />
+            <app-alert tone="info" title="Obsługa czytelnika"
+                message="Czytelnik może sam przedłużyć termin o kolejny tydzień, ale zwrot książki rozlicza bibliotekarz." />
             } @else {
             <app-alert tone="success" title="Zwrot zakończony" message="To wypożyczenie zostało już rozliczone." />
             }

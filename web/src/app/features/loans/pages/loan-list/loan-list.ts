@@ -2,22 +2,28 @@ import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Loan } from '../../../../core/models/loan';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { ApiService } from '../../../../core/services/api.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-loan-list',
-  imports: [FormsModule, RouterLink, Modal],
+  imports: [FormsModule, RouterLink, Modal, Pagination],
   templateUrl: './loan-list.html',
   styleUrl: './loan-list.css',
 })
 export class LoanList implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   activeFilter: Loan['status'] | 'all' = 'all';
   loans = signal<Loan[]>([]);
   loading = signal(false);
   returnModalOpen = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
+  currentPage = signal(1);
   pendingReturnLoanId = signal<number | null>(null);
 
   filters: { label: string; value: Loan['status'] | 'all' }[] = [
@@ -27,23 +33,27 @@ export class LoanList implements OnInit {
     { label: 'Zwrócone', value: 'returned' },
   ];
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private auth: AuthService,
+  ) {}
 
   ngOnInit() {
     this.loadLoans();
   }
 
-  loadLoans() {
+  loadLoans(page = this.currentPage()) {
     this.loading.set(true);
     this.error.set(null);
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(page) };
     if (this.activeFilter !== 'all') params['status'] = this.activeFilter;
 
     this.api.getLoans(params).subscribe({
       next: (response) => {
         this.loans.set(response.results);
         this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -55,7 +65,13 @@ export class LoanList implements OnInit {
 
   setFilter(filter: Loan['status'] | 'all') {
     this.activeFilter = filter;
-    this.loadLoans();
+    this.currentPage.set(1);
+    this.loadLoans(1);
+  }
+
+  setPage(page: number) {
+    this.currentPage.set(page);
+    this.loadLoans(page);
   }
 
   returnLoan(id: number) {
@@ -98,8 +114,12 @@ export class LoanList implements OnInit {
     const labels: Record<Loan['status'], string> = {
       active: 'Aktywne',
       overdue: 'Przeterminowane',
-      returned: 'Zwrócone',
+      returned: 'Zwrócono',
     };
     return labels[status];
+  }
+
+  isStaff(): boolean {
+    return this.auth.isStaff();
   }
 }

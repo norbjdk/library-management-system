@@ -23,8 +23,9 @@ class CatalogApiTests(LibraryAPITestCase):
         response = self.client.get(reverse("book-list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        book = response.data[0]
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        book = response.data["results"][0]
         self.assertEqual(book["title"], self.book.title)
         self.assertEqual(book["copies_count"], 3)
         self.assertEqual(book["available_copies"], 1)

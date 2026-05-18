@@ -5,19 +5,64 @@ import { Fine } from '../../../../core/models/fine';
 import { Loan } from '../../../../core/models/loan';
 import { Notification } from '../../../../core/models/notification';
 import { Order } from '../../../../core/models/order';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { Reservation } from '../../../../core/models/reservation';
 import { DashboardStats } from '../../../../core/models/stats';
 import { User } from '../../../../core/models/user';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
+
+type DashboardSection =
+  | 'readers'
+  | 'loans'
+  | 'authors'
+  | 'publishers'
+  | 'categories'
+  | 'locations'
+  | 'copies'
+  | 'reservations'
+  | 'fines'
+  | 'orders'
+  | 'notifications';
+
+const INITIAL_SECTION_PAGES: Record<DashboardSection, number> = {
+  readers: 1,
+  loans: 1,
+  authors: 1,
+  publishers: 1,
+  categories: 1,
+  locations: 1,
+  copies: 1,
+  reservations: 1,
+  fines: 1,
+  orders: 1,
+  notifications: 1,
+};
+
+const INITIAL_SECTION_COUNTS: Record<DashboardSection, number> = {
+  readers: 0,
+  loans: 0,
+  authors: 0,
+  publishers: 0,
+  categories: 0,
+  locations: 0,
+  copies: 0,
+  reservations: 0,
+  fines: 0,
+  orders: 0,
+  notifications: 0,
+};
 
 @Component({
   selector: 'app-dashboard',
-  imports: [],
+  imports: [Pagination],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
 export class Dashboard implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   stats = signal<DashboardStats | null>(null);
   recentLoans = signal<Loan[]>([]);
   readers = signal<User[]>([]);
@@ -32,6 +77,8 @@ export class Dashboard implements OnInit {
   copies = signal<Copy[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
+  sectionPages = signal<Record<DashboardSection, number>>({ ...INITIAL_SECTION_PAGES });
+  sectionCounts = signal<Record<DashboardSection, number>>({ ...INITIAL_SECTION_COUNTS });
 
   cards = computed(() => {
     const snapshot = this.stats();
@@ -71,8 +118,8 @@ export class Dashboard implements OnInit {
         color: 'bg-violet-100 text-violet-700',
       },
       {
-        label: 'Kar (PLN)',
-        value: snapshot.totalFines.toFixed(2),
+        label: 'Nieopłacone kary',
+        value: snapshot.unpaidFines,
         icon: '💰',
         color: 'bg-orange-100 text-orange-700',
       },
@@ -92,22 +139,26 @@ export class Dashboard implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    const bulkParams = { page_size: '200' };
+    const summaryParams = { page: '1', page_size: String(this.pageSize) };
 
     forkJoin({
-      books: this.api.getBooks(bulkParams),
-      loans: this.api.getLoans(bulkParams),
-      overdueLoans: this.api.getLoans({ ...bulkParams, overdue: 'true' }),
-      readers: this.api.getReaders(bulkParams),
-      reservations: this.api.getReservations(bulkParams),
-      fines: this.api.getFines(bulkParams),
-      orders: this.api.getOrders(bulkParams),
-      notifications: this.api.getNotifications(bulkParams),
-      authors: this.api.getAuthors(bulkParams),
-      publishers: this.api.getPublishers(bulkParams),
-      categories: this.api.getCategories(bulkParams),
-      locations: this.api.getLocations(bulkParams),
-      copies: this.api.getCopies(bulkParams),
+      books: this.api.getBooks(summaryParams),
+      loans: this.api.getLoans(this.buildSectionParams('loans')),
+      overdueLoans: this.api.getLoans({ ...summaryParams, overdue: 'true' }),
+      readers: this.api.getReaders(this.buildSectionParams('readers')),
+      reservations: this.api.getReservations(this.buildSectionParams('reservations')),
+      fines: this.api.getFines(this.buildSectionParams('fines')),
+      unpaidFines: this.api.getFines({ ...summaryParams, paid: 'false' }),
+      orders: this.api.getOrders(this.buildSectionParams('orders')),
+      draftOrders: this.api.getOrders({ ...summaryParams, status: 'draft' }),
+      submittedOrders: this.api.getOrders({ ...summaryParams, status: 'submitted' }),
+      processingOrders: this.api.getOrders({ ...summaryParams, status: 'processing' }),
+      notifications: this.api.getNotifications(this.buildSectionParams('notifications')),
+      authors: this.api.getAuthors(this.buildSectionParams('authors')),
+      publishers: this.api.getPublishers(this.buildSectionParams('publishers')),
+      categories: this.api.getCategories(this.buildSectionParams('categories')),
+      locations: this.api.getLocations(this.buildSectionParams('locations')),
+      copies: this.api.getCopies(this.buildSectionParams('copies')),
     }).subscribe({
       next: ({
         books,
@@ -116,7 +167,11 @@ export class Dashboard implements OnInit {
         readers,
         reservations,
         fines,
+        unpaidFines,
         orders,
+        draftOrders,
+        submittedOrders,
+        processingOrders,
         notifications,
         authors,
         publishers,
@@ -124,10 +179,7 @@ export class Dashboard implements OnInit {
         locations,
         copies,
       }) => {
-        const pendingOrders = orders.results.filter(
-          (order) => !['received', 'cancelled'].includes(order.status),
-        ).length;
-        const totalFines = fines.results.reduce((total, fine) => total + Number(fine.amount), 0);
+        const pendingOrders = draftOrders.count + submittedOrders.count + processingOrders.count;
 
         this.stats.set({
           totalBooks: books.count,
@@ -135,14 +187,28 @@ export class Dashboard implements OnInit {
           overdueLoans: overdueLoans.count,
           totalUsers: readers.count,
           pendingOrders,
-          totalFines,
+          unpaidFines: unpaidFines.count,
+        });
+
+        this.sectionCounts.set({
+          readers: readers.count,
+          loans: loans.count,
+          authors: authors.count,
+          publishers: publishers.count,
+          categories: categories.count,
+          locations: locations.count,
+          copies: copies.count,
+          reservations: reservations.count,
+          fines: fines.count,
+          orders: orders.count,
+          notifications: notifications.count,
         });
         this.readers.set(readers.results);
-        this.recentLoans.set(loans.results.slice(0, 5));
-        this.reservations.set(reservations.results.slice(0, 5));
-        this.fines.set(fines.results.slice(0, 5));
-        this.orders.set(orders.results.slice(0, 5));
-        this.notifications.set(notifications.results.slice(0, 5));
+        this.recentLoans.set(loans.results);
+        this.reservations.set(reservations.results);
+        this.fines.set(fines.results);
+        this.orders.set(orders.results);
+        this.notifications.set(notifications.results);
         this.authors.set(authors.results);
         this.publishers.set(publishers.results);
         this.categories.set(categories.results);
@@ -151,27 +217,44 @@ export class Dashboard implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Nie udało się pobrać danych dashboardu.');
+        this.error.set('Nie udało się pobrać danych panelu.');
         this.loading.set(false);
       },
     });
+  }
+
+  private buildSectionParams(
+    section: DashboardSection,
+    extraParams: Record<string, string> = {},
+  ): Record<string, string> {
+    return {
+      ...extraParams,
+      page: String(this.sectionPages()[section]),
+      page_size: String(this.pageSize),
+    };
   }
 
   getGreeting(): string {
     const user = this.auth.user();
     return user?.first_name
       ? `Witaj z powrotem, ${user.first_name}`
-      : 'Przegląd bieżącej sytuacji biblioteki';
+      : 'Podgląd bieżącej sytuacji biblioteki';
   }
 
   getStatusClasses(status: string): string {
-    return status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+    if (status === 'active') {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    if (status === 'overdue') {
+      return 'bg-rose-100 text-rose-700';
+    }
+    return 'bg-slate-200 text-slate-700';
   }
 
   getStatusLabel(status: string): string {
     if (status === 'active') return 'Aktywne';
     if (status === 'overdue') return 'Przeterminowane';
-    return 'Zwrócone';
+    return 'Zwrócono';
   }
 
   getCopyConditionLabel(condition: string): string {
@@ -186,12 +269,38 @@ export class Dashboard implements OnInit {
 
   getReservationStatusLabel(status: Reservation['status']): string {
     const labels: Record<Reservation['status'], string> = {
-      pending: 'Oczekująca',
-      fulfilled: 'Zrealizowana',
-      cancelled: 'Anulowana',
-      expired: 'Wygasła',
+      pending: 'Oczekuje',
+      fulfilled: 'Wydano',
+      cancelled: 'Anulowano',
+      expired: 'Wygasło',
     };
     return labels[status];
+  }
+
+  getRoleLabel(role: User['role']): string {
+    const labels: Record<User['role'], string> = {
+      admin: 'Administrator',
+      librarian: 'Bibliotekarz',
+      reader: 'Czytelnik',
+    };
+
+    return labels[role];
+  }
+
+  getSectionPage(section: DashboardSection): number {
+    return this.sectionPages()[section];
+  }
+
+  getSectionCount(section: DashboardSection): number {
+    return this.sectionCounts()[section];
+  }
+
+  setSectionPage(section: DashboardSection, page: number): void {
+    this.sectionPages.update((state) => ({
+      ...state,
+      [section]: page,
+    }));
+    this.loadDashboard();
   }
 
   getOrderStatusLabel(status: Order['status']): string {

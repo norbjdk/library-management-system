@@ -31,74 +31,83 @@
     }
 
     @if (!loading()) {
-    <div class="panel-card overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
-                        <th class="px-6 py-3 text-left">Książka</th>
-                        @if (isStaff()) {
-                        <th class="px-6 py-3 text-left">Czytelnik</th>
+    <div class="space-y-5">
+        <div class="panel-card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                            <th class="px-6 py-3 text-left">Książka</th>
+                            @if (isStaff()) {
+                            <th class="px-6 py-3 text-left">Czytelnik</th>
+                            }
+                            <th class="px-6 py-3 text-left">Data rezerwacji</th>
+                            <th class="px-6 py-3 text-left">Ważna do</th>
+                            <th class="px-6 py-3 text-left">Pozycja</th>
+                            <th class="px-6 py-3 text-left">Gotowość</th>
+                            <th class="px-6 py-3 text-left">Status</th>
+                            <th class="px-6 py-3 text-left">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (reservation of reservations(); track reservation.id) {
+                        <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4">
+                                <a [routerLink]="['/catalog', reservation.book]"
+                                    class="font-medium text-slate-800 hover:text-orange-700">
+                                    {{ reservation.book_title }}
+                                </a>
+                            </td>
+                            @if (isStaff()) {
+                            <td class="px-6 py-4 text-slate-600">{{ reservation.user_name }}</td>
+                            }
+                            <td class="px-6 py-4 text-slate-500">{{ reservation.reservation_date }}</td>
+                            <td class="px-6 py-4 text-slate-500">{{ reservation.expiry_date }}</td>
+                            <td class="px-6 py-4 text-slate-700 font-medium">{{ reservation.queue_position || '—' }}
+                            </td>
+                            <td class="px-6 py-4 text-slate-500">{{ reservation.estimated_ready_date ?? '—' }}</td>
+                            <td class="px-6 py-4">
+                                <span
+                                    class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(reservation.status) }}">
+                                    {{ getStatusLabel(reservation.status) }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-3 flex-wrap">
+                                    @if (reservation.status === 'pending') {
+                                    <button type="button"
+                                        class="inline-flex items-center justify-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-50"
+                                        (click)="requestCancelReservation(reservation.id)">
+                                        Anuluj
+                                    </button>
+                                    }
+                                    @if (isStaff() && reservation.status === 'pending') {
+                                    <button type="button"
+                                        class="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                                        (click)="requestIssueReservation(reservation.id)">
+                                        Wydaj na 7 dni
+                                    </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
                         }
-                        <th class="px-6 py-3 text-left">Data rezerwacji</th>
-                        <th class="px-6 py-3 text-left">Ważna do</th>
-                        <th class="px-6 py-3 text-left">Pozycja</th>
-                        <th class="px-6 py-3 text-left">Gotowość</th>
-                        <th class="px-6 py-3 text-left">Status</th>
-                        <th class="px-6 py-3 text-left">Akcje</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (reservation of reservations(); track reservation.id) {
-                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-4">
-                            <a [routerLink]="['/catalog', reservation.book]"
-                                class="font-medium text-slate-800 hover:text-orange-700">
-                                {{ reservation.book_title }}
-                            </a>
-                        </td>
-                        @if (isStaff()) {
-                        <td class="px-6 py-4 text-slate-600">{{ reservation.user_name }}</td>
-                        }
-                        <td class="px-6 py-4 text-slate-500">{{ reservation.reservation_date }}</td>
-                        <td class="px-6 py-4 text-slate-500">{{ reservation.expiry_date }}</td>
-                        <td class="px-6 py-4 text-slate-700 font-medium">{{ reservation.queue_position || '—' }}</td>
-                        <td class="px-6 py-4 text-slate-500">{{ reservation.estimated_ready_date ?? '—' }}</td>
-                        <td class="px-6 py-4">
-                            <span
-                                class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(reservation.status) }}">
-                                {{ getStatusLabel(reservation.status) }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex gap-3 flex-wrap">
-                                @if (reservation.status === 'pending') {
-                                <button type="button" class="text-xs text-rose-600 hover:text-rose-800 underline"
-                                    (click)="requestCancelReservation(reservation.id)">
-                                    Anuluj
-                                </button>
-                                }
-                                @if (isStaff() && reservation.status === 'pending') {
-                                <button type="button" class="text-xs text-emerald-600 hover:text-emerald-800 underline"
-                                    (click)="requestFulfillReservation(reservation.id)">
-                                    Zrealizuj
-                                </button>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                    }
 
-                    @empty {
-                    <tr>
-                        <td [attr.colspan]="isStaff() ? 8 : 7" class="px-6 py-16 text-center text-slate-400 text-sm">
-                            Brak rezerwacji. Wybierz książkę z katalogu i dodaj ją do kolejki.
-                        </td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
+                        @empty {
+                        <tr>
+                            <td [attr.colspan]="isStaff() ? 8 : 7"
+                                class="px-6 py-16 text-center text-slate-400 text-sm">
+                                Brak rezerwacji. Wybierz książkę z katalogu i dodaj ją do kolejki.
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="count()"
+            (pageChange)="setPage($event)" />
     </div>
     }
 

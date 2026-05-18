@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, OnInit, signal } from '@angular/core';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { User } from '../../../../core/models/user';
 import { ApiService } from '../../../../core/services/api.service';
 import { Alert } from '../../../../shared/components/alert/alert';
@@ -18,13 +19,14 @@ import { Table, TableColumn, TableRow } from '../../../../shared/components/tabl
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserList implements OnInit {
-  private readonly pageSize = 8;
+  readonly pageSize = DEFAULT_PAGE_SIZE;
 
   users = signal<User[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
   search = signal('');
   currentPage = signal(1);
+  count = signal(0);
 
   breadcrumbItems: BreadcrumbItem[] = [
     { label: 'Panel', path: '/catalog' },
@@ -41,40 +43,21 @@ export class UserList implements OnInit {
     { key: 'fineTotal', label: 'Kary (PLN)', align: 'right', emptyValue: '0.00' },
   ];
 
-  filteredUsers = computed(() => {
-    const query = this.search().trim().toLowerCase();
-    const snapshot = this.users();
-
-    if (!query) {
-      return snapshot;
-    }
-
-    return snapshot.filter((user) =>
-      [user.first_name, user.last_name, user.email, user.role]
-        .join(' ')
-        .toLowerCase()
-        .includes(query),
-    );
-  });
-
   tableRows = computed<TableRow[]>(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredUsers()
-      .slice(start, start + this.pageSize)
-      .map((user) => ({
-        id: user.id,
-        name: user.full_name ?? `${user.first_name} ${user.last_name}`.trim(),
-        email: user.email,
-        role: this.getRoleLabel(user.role),
-        loans: user.loan_count ?? 0,
-        reservations: user.reservation_count ?? 0,
-        fineTotal: Number(user.fine_total ?? 0).toFixed(2),
-      }));
+    return this.users().map((user) => ({
+      id: user.id,
+      name: user.full_name ?? `${user.first_name} ${user.last_name}`.trim(),
+      email: user.email,
+      role: this.getRoleLabel(user.role),
+      loans: user.loan_count ?? 0,
+      reservations: user.reservation_count ?? 0,
+      fineTotal: Number(user.fine_total ?? 0).toFixed(2),
+    }));
   });
 
-  totalReaders = computed(() => this.users().filter((user) => user.role === 'reader').length);
-  totalStaff = computed(() => this.users().filter((user) => user.is_staff).length);
-  totalItems = computed(() => this.filteredUsers().length);
+  visibleReaders = computed(() => this.users().filter((user) => user.role === 'reader').length);
+  visibleStaff = computed(() => this.users().filter((user) => user.is_staff).length);
+  totalItems = computed(() => this.count());
 
   constructor(private api: ApiService) {}
 
@@ -82,13 +65,21 @@ export class UserList implements OnInit {
     this.loadReaders();
   }
 
-  loadReaders(): void {
+  loadReaders(page = this.currentPage()): void {
     this.loading.set(true);
     this.error.set(null);
 
-    this.api.getReaders().subscribe({
+    const params: Record<string, string> = { page: String(page) };
+    const query = this.search().trim();
+    if (query) {
+      params['q'] = query;
+    }
+
+    this.api.getReaders(params).subscribe({
       next: (response) => {
         this.users.set(response.results);
+        this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -101,10 +92,12 @@ export class UserList implements OnInit {
   setSearch(value: string): void {
     this.search.set(value);
     this.currentPage.set(1);
+    this.loadReaders(1);
   }
 
   setPage(page: number): void {
     this.currentPage.set(page);
+    this.loadReaders(page);
   }
 
   private getRoleLabel(role: User['role']): string {

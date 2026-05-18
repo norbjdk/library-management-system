@@ -1,17 +1,21 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { Reservation } from '../../../../core/models/reservation';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-queue-list',
-  imports: [RouterLink, Modal],
+  imports: [RouterLink, Modal, Pagination],
   templateUrl: './queue-list.html',
   styleUrl: './queue-list.css',
 })
 export class QueueList implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   activeFilter: Reservation['status'] | 'all' = 'all';
   reservations = signal<Reservation[]>([]);
   loading = signal(false);
@@ -20,12 +24,13 @@ export class QueueList implements OnInit {
   actionModalDescription = signal('');
   error = signal<string | null>(null);
   count = signal(0);
+  currentPage = signal(1);
   private pendingAction: (() => void) | null = null;
 
   filters: { label: string; value: Reservation['status'] | 'all' }[] = [
     { label: 'Wszystkie', value: 'all' },
     { label: 'Oczekujące', value: 'pending' },
-    { label: 'Zrealizowane', value: 'fulfilled' },
+    { label: 'Wydane', value: 'fulfilled' },
     { label: 'Anulowane', value: 'cancelled' },
     { label: 'Wygasłe', value: 'expired' },
   ];
@@ -43,11 +48,11 @@ export class QueueList implements OnInit {
     return this.auth.isStaff();
   }
 
-  loadReservations() {
+  loadReservations(page = this.currentPage()) {
     this.loading.set(true);
     this.error.set(null);
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(page) };
     if (this.activeFilter !== 'all') {
       params['status'] = this.activeFilter;
     }
@@ -56,6 +61,7 @@ export class QueueList implements OnInit {
       next: (response) => {
         this.reservations.set(response.results);
         this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -67,7 +73,13 @@ export class QueueList implements OnInit {
 
   setFilter(filter: Reservation['status'] | 'all') {
     this.activeFilter = filter;
-    this.loadReservations();
+    this.currentPage.set(1);
+    this.loadReservations(1);
+  }
+
+  setPage(page: number) {
+    this.currentPage.set(page);
+    this.loadReservations(page);
   }
 
   cancelReservation(id: number) {
@@ -85,20 +97,24 @@ export class QueueList implements OnInit {
     );
   }
 
-  fulfillReservation(id: number) {
-    this.api.fulfillReservation(id).subscribe({
+  issueReservation(id: number) {
+    this.api.issueReservation(id).subscribe({
       next: () => this.loadReservations(),
       error: (err) => {
-        this.error.set(err?.error?.book?.[0] ?? 'Nie udało się zrealizować rezerwacji.');
+        this.error.set(
+          err?.error?.detail?.[0] ??
+            err?.error?.detail ??
+            'Nie udało się wydać książki z rezerwacji.',
+        );
       },
     });
   }
 
-  requestFulfillReservation(id: number) {
+  requestIssueReservation(id: number) {
     this.openActionModal(
-      'Zrealizować rezerwację?',
-      'System oznaczy rezerwację jako gotową do odbioru dla czytelnika.',
-      () => this.fulfillReservation(id),
+      'Wydać książkę czytelnikowi?',
+      'System utworzy 7-dniowe wypożyczenie na podstawie tej rezerwacji.',
+      () => this.issueReservation(id),
     );
   }
 
@@ -122,10 +138,10 @@ export class QueueList implements OnInit {
 
   getStatusLabel(status: Reservation['status']): string {
     const labels = {
-      pending: 'Oczekująca',
-      fulfilled: 'Zrealizowana',
-      cancelled: 'Anulowana',
-      expired: 'Wygasła',
+      pending: 'Oczekuje',
+      fulfilled: 'Wydano',
+      cancelled: 'Anulowano',
+      expired: 'Wygasło',
     };
 
     return labels[status];

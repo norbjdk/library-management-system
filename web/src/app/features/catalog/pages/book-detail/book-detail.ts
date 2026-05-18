@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { Book, BookAvailability, Copy } from '../../../../core/models/book';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -26,12 +26,12 @@ export class BookDetail implements OnInit {
   copies = signal<Copy[]>([]);
   hasExistingReservation = signal(false);
   loading = signal(false);
-  borrowing = signal(false);
   submittingReservation = signal(false);
-  borrowModalOpen = signal(false);
   reserveModalOpen = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
+  private reservationModalRequested = false;
+  private autoReserveRequested = false;
 
   reservationExpiry = this.getDefaultExpiryDate();
 
@@ -48,6 +48,9 @@ export class BookDetail implements OnInit {
       return;
     }
 
+    this.reservationModalRequested = this.route.snapshot.queryParamMap.get('reserve') === '1';
+    this.autoReserveRequested = this.route.snapshot.queryParamMap.get('autoReserve') === '1';
+
     this.loadBook(bookId);
   }
 
@@ -57,22 +60,37 @@ export class BookDetail implements OnInit {
     return date.toISOString().slice(0, 10);
   }
 
-  private loadBook(bookId: number) {
+  private loadBook(bookId: number, options: { preserveMessages?: boolean } = {}) {
     this.loading.set(true);
     this.error.set(null);
-    this.success.set(null);
+    if (!options.preserveMessages) {
+      this.success.set(null);
+    }
+
+    const reservationsRequest =
+      !this.isLoggedIn() || this.isStaff()
+        ? of({ count: 0, next: null, previous: null, results: [] })
+        : this.api.getReservations({ book: String(bookId) });
 
     forkJoin({
       book: this.api.getBook(bookId),
       availability: this.api.getBookAvailability(bookId),
       copies: this.api.getCopies({ book: String(bookId) }),
-      reservations: this.api.getReservations({ book: String(bookId) }),
+      reservations: reservationsRequest,
     }).subscribe({
       next: ({ book, availability, copies, reservations }) => {
         this.book.set(book);
         this.availability.set(availability);
         this.copies.set(copies.results);
         this.hasExistingReservation.set(reservations.results.length > 0);
+        if (this.autoReserveRequested && this.isLoggedIn() && !this.isStaff()) {
+          this.autoReserveRequested = false;
+          this.reserveBook();
+        }
+        if (this.reservationModalRequested && this.isLoggedIn() && !this.isStaff()) {
+          this.reserveModalOpen.set(true);
+          this.reservationModalRequested = false;
+        }
         this.loading.set(false);
       },
       error: () => {
@@ -85,6 +103,10 @@ export class BookDetail implements OnInit {
   reserveBook() {
     const currentBook = this.book();
     if (!currentBook) {
+      return;
+    }
+    if (!this.isLoggedIn()) {
+      this.error.set('Zaloguj się lub załóż konto, aby zarezerwować książkę.');
       return;
     }
 
@@ -113,6 +135,9 @@ export class BookDetail implements OnInit {
 
     this.submittingReservation.set(true);
     this.error.set(null);
+    this.reservationModalRequested = false;
+
+    const hasAvailableCopies = this.hasAvailableCopies();
 
     this.api
       .createReservation({
@@ -122,9 +147,9 @@ export class BookDetail implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.success.set('Rezerwacja została zapisana w kolejce.');
+          this.success.set(this.getReservationSuccessMessage(hasAvailableCopies));
           this.submittingReservation.set(false);
-          this.loadBook(currentBook.id);
+          this.loadBook(currentBook.id, { preserveMessages: true });
         },
         error: (err) => {
           const duplicateReservationMessage =
@@ -144,20 +169,8 @@ export class BookDetail implements OnInit {
       });
   }
 
-  requestBorrowConfirmation() {
-    this.borrowModalOpen.set(true);
-  }
-
-  closeBorrowModal() {
-    this.borrowModalOpen.set(false);
-  }
-
-  confirmBorrow() {
-    this.closeBorrowModal();
-    this.borrowBook();
-  }
-
   requestReservationConfirmation() {
+    this.error.set(null);
     this.reserveModalOpen.set(true);
   }
 
@@ -168,31 +181,6 @@ export class BookDetail implements OnInit {
   confirmReservation() {
     this.closeReservationModal();
     this.reserveBook();
-  }
-
-  borrowBook() {
-    const currentBook = this.book();
-    if (!currentBook) {
-      return;
-    }
-
-    this.borrowing.set(true);
-    this.error.set(null);
-    this.success.set(null);
-
-    this.api.borrowBook(currentBook.id).subscribe({
-      next: () => {
-        this.success.set('Książka została wypożyczona i przypisana do Twojego konta.');
-        this.borrowing.set(false);
-        this.loadBook(currentBook.id);
-      },
-      error: (err) => {
-        this.error.set(
-          err?.error?.detail ?? err?.error?.book?.[0] ?? 'Nie udało się wypożyczyć książki.',
-        );
-        this.borrowing.set(false);
-      },
-    });
   }
 
   hasAvailableCopies(): boolean {
@@ -207,6 +195,41 @@ export class BookDetail implements OnInit {
 
   isStaff(): boolean {
     return this.auth.isStaff();
+  }
+
+  isLoggedIn(): boolean {
+    return this.auth.isLoggedIn();
+  }
+
+  getLoginQueryParams(mode?: 'register'): { redirectTo: string; mode?: 'register' } {
+    return {
+      redirectTo: `/catalog/${this.book()?.id ?? ''}`,
+      ...(mode ? { mode } : {}),
+    };
+  }
+
+  getReservationButtonLabel(): string {
+    return this.hasAvailableCopies() ? 'Zarezerwuj' : 'Kolejka';
+  }
+
+  getReservationModalTitle(): string {
+    return this.hasAvailableCopies() ? 'Potwierdź rezerwację' : 'Dołącz do kolejki rezerwacji';
+  }
+
+  getReservationModalDescription(): string {
+    return this.hasAvailableCopies()
+      ? 'Po potwierdzeniu zapiszesz książkę do odbioru. Bibliotekarz wyda ją na 7 dni.'
+      : 'Po potwierdzeniu dołączysz do kolejki. Gdy nadejdzie Twoja kolej, książka będzie gotowa do odbioru w bibliotece.';
+  }
+
+  getReservationSubmittingLabel(): string {
+    return this.hasAvailableCopies() ? 'Zapisywanie rezerwacji...' : 'Dołączanie do kolejki...';
+  }
+
+  private getReservationSuccessMessage(hasAvailableCopies: boolean): string {
+    return hasAvailableCopies
+      ? 'Rezerwacja została zapisana. Książkę będzie można odebrać w bibliotece po wydaniu przez bibliotekarza.'
+      : 'Dołączyłeś do kolejki rezerwacji. Gdy nadejdzie Twoja kolej, książka będzie gotowa do odbioru w bibliotece.';
   }
 
   getAuthorList(book: Book): string {

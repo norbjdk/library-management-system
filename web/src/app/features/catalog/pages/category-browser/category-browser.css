@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+
+@media (min-width: 1280px) {
+  .category-sidebar {
+    position: sticky;
+    top: calc(var(--nav-height, 80px) + 1rem);
+    align-self: start;
+    max-height: calc(100vh - var(--nav-height, 80px) - 2rem);
+    overflow: auto;
+  }
+}

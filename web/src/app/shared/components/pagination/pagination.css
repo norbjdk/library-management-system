@@ -12,8 +12,8 @@
 
 .pagination-shell button {
   border: 1px solid rgba(22, 32, 51, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
   color: #223149;
   min-width: 2.5rem;
   min-height: 2.5rem;
@@ -34,7 +34,7 @@
 }
 
 .pagination-active {
-  background: linear-gradient(135deg, #c56a2d 0%, #9f4f1c 100%) !important;
+  background: #c56a2d !important;
   color: white !important;
   border-color: transparent !important;
 }

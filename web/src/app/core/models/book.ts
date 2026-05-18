@@ -65,4 +65,5 @@ export interface Book {
   active_loans: number;
   active_reservations: number;
   estimated_wait_days: number;
+  user_has_active_reservation?: boolean;
 }

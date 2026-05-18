@@ -1,21 +1,27 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { Fine } from '../../../../core/models/fine';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { ApiService } from '../../../../core/services/api.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-fines-list',
-  imports: [Modal],
+  imports: [Modal, Pagination],
   templateUrl: './fines-list.html',
   styleUrl: './fines-list.css',
 })
 export class FinesList implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   activeFilter: 'all' | 'paid' | 'unpaid' = 'all';
   fines = signal<Fine[]>([]);
   loading = signal(false);
   actionModalOpen = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
+  currentPage = signal(1);
   pendingFineId = signal<number | null>(null);
 
   filters: { label: string; value: 'all' | 'paid' | 'unpaid' }[] = [
@@ -24,17 +30,20 @@ export class FinesList implements OnInit {
     { label: 'Opłacone', value: 'paid' },
   ];
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private auth: AuthService,
+  ) {}
 
   ngOnInit() {
     this.loadFines();
   }
 
-  loadFines() {
+  loadFines(page = this.currentPage()) {
     this.loading.set(true);
     this.error.set(null);
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(page) };
     if (this.activeFilter === 'paid') params['paid'] = 'true';
     if (this.activeFilter === 'unpaid') params['paid'] = 'false';
 
@@ -42,6 +51,7 @@ export class FinesList implements OnInit {
       next: (response) => {
         this.fines.set(response.results);
         this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -53,7 +63,13 @@ export class FinesList implements OnInit {
 
   setFilter(filter: 'all' | 'paid' | 'unpaid') {
     this.activeFilter = filter;
-    this.loadFines();
+    this.currentPage.set(1);
+    this.loadFines(1);
+  }
+
+  setPage(page: number) {
+    this.currentPage.set(page);
+    this.loadFines(page);
   }
 
   settleFine(id: number) {
@@ -81,5 +97,9 @@ export class FinesList implements OnInit {
 
     this.closeActionModal();
     this.settleFine(id);
+  }
+
+  isStaff(): boolean {
+    return this.auth.isStaff();
   }
 }

@@ -1,0 +1,148 @@
+<div class="page-shell">
+  <div class="page-header">
+    <div>
+      <p class="page-kicker">Kategorie</p>
+      <h1 class="text-3xl text-slate-900">Przeglądaj katalog według kategorii</h1>
+      <p class="page-subtitle mt-2">10 sekcji tematycznych z realnymi tytułami i szybkim przejściem do rezerwacji.</p>
+    </div>
+    <a routerLink="/catalog" class="secondary-button">Wróć do katalogu</a>
+  </div>
+
+  @if (!isLoggedIn()) {
+  <div class="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+    Przeglądasz system w trybie gościa. Kategorie i szczegóły książek są publiczne, ale rezerwacja,
+    kolejka i obsługa konta wymagają logowania lub rejestracji.
+  </div>
+  }
+
+  @if (error()) {
+  <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-2xl">
+    {{ error() }}
+  </div>
+  }
+
+  <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <section class="panel-card p-5 space-y-4 category-sidebar">
+      <div>
+        <p class="page-kicker">Lista kategorii</p>
+        <h2 class="text-2xl text-slate-900">Działy biblioteki</h2>
+      </div>
+
+      @if (loadingCategories()) {
+      <div class="space-y-2">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="h-16 rounded-2xl bg-slate-100 animate-pulse"></div>
+        }
+      </div>
+      } @else {
+      <div class="space-y-2">
+        @for (category of categories(); track category.id) {
+        <button type="button" (click)="selectCategory(category.id)"
+          class="w-full rounded-2xl border px-4 py-4 text-left transition-colors"
+          [class.border-slate-900]="selectedCategory()?.id === category.id"
+          [class.bg-slate-900]="selectedCategory()?.id === category.id"
+          [class.text-white]="selectedCategory()?.id === category.id"
+          [class.border-slate-200]="selectedCategory()?.id !== category.id"
+          [class.bg-white]="selectedCategory()?.id !== category.id"
+          [class.text-slate-700]="selectedCategory()?.id !== category.id">
+          <strong class="block text-base">{{ category.name }}</strong>
+          <span class="mt-1 block text-sm" [class.text-slate-300]="selectedCategory()?.id === category.id"
+            [class.text-slate-500]="selectedCategory()?.id !== category.id">
+            {{ category.description ?? 'Kolekcja tematyczna.' }}
+          </span>
+        </button>
+        }
+      </div>
+      }
+    </section>
+
+    <section class="space-y-4">
+      @if (selectedCategory(); as category) {
+      <div class="panel-card p-6">
+        <p class="page-kicker">Wybrana kategoria</p>
+        <h2 class="text-3xl text-slate-900">{{ category.name }}</h2>
+        <p class="page-subtitle mt-2">{{ category.description ?? 'Wybrane książki w tej sekcji.' }}</p>
+        <p class="text-sm text-slate-500 mt-3">{{ count() }} tytułów w tej kategorii.</p>
+      </div>
+      }
+
+      @if (loadingBooks()) {
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="panel-card p-5 animate-pulse">
+          <div class="h-4 bg-slate-200 rounded w-2/3 mb-3"></div>
+          <div class="h-3 bg-slate-200 rounded w-1/2 mb-5"></div>
+          <div class="space-y-2">
+            <div class="h-3 bg-slate-200 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded"></div>
+          </div>
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          @for (book of books(); track book.id) {
+          <article class="panel-card p-5 flex flex-col gap-4">
+            <div class="space-y-2">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-lg font-semibold text-slate-900">{{ book.title }}</h3>
+                  <p class="text-sm text-slate-500">{{ getAuthorNames(book) }}</p>
+                </div>
+                <span class="rounded-full px-3 py-1 text-xs font-medium"
+                  [class.bg-emerald-100]="book.available_copies > 0"
+                  [class.text-emerald-700]="book.available_copies > 0" [class.bg-rose-100]="book.available_copies < 1"
+                  [class.text-rose-700]="book.available_copies < 1">
+                  {{ book.available_copies > 0 ? 'Dostępna' : 'W kolejce' }}
+                </span>
+              </div>
+              <p class="text-sm text-slate-600">Rok wydania: {{ book.publish_year ?? 'brak danych' }}</p>
+              <p class="text-sm text-slate-600">{{ getAvailabilityLabel(book) }}</p>
+            </div>
+
+            <div class="mt-auto flex flex-col sm:flex-row gap-2">
+              <a [routerLink]="['/catalog', book.id]" class="secondary-button w-full text-center">
+                Szczegóły
+              </a>
+              @if (!isLoggedIn()) {
+              <a routerLink="/login" [queryParams]="getLoginQueryParams(book.id)"
+                class="accent-button w-full text-center">
+                Zaloguj się
+              </a>
+              } @else if (!isStaff()) {
+              <button type="button" (click)="requestReservation(book)" [disabled]="isReservationDisabled(book)"
+                class="accent-button w-full text-center disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ getReserveLabel(book) }}
+              </button>
+              }
+            </div>
+          </article>
+          }
+
+          @empty {
+          <div class="panel-card px-6 py-16 text-center text-slate-400 md:col-span-2">
+            Brak książek dla wybranej kategorii.
+          </div>
+          }
+        </div>
+
+        <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="count()"
+          (pageChange)="setPage($event)" />
+      </div>
+      }
+    </section>
+  </div>
+
+  <app-modal [open]="reserveModalOpen()" [title]="getReservationModalTitle()"
+    [description]="getReservationModalDescription()" (closed)="closeReservationModal()">
+    <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+      <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeReservationModal()">
+        Anuluj
+      </button>
+      <button type="button" class="accent-button w-full sm:w-auto" (click)="confirmReservation()">
+        {{ getReservationConfirmLabel() }}
+      </button>
+    </div>
+  </app-modal>
+</div>

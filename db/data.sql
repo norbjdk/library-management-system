@@ -1,9 +1,10 @@
 INSERT INTO users ("firstName", "lastName", email, birthdate, password, role, "createDate")
 VALUES
     ('Admin', 'LMS', 'admin@library.com', '2000-05-15', 'passwd', 'admin', CURRENT_TIMESTAMP),
-    ('Anna', 'Czytelnik', 'reader@library.com', '1998-03-12', 'passwd', 'reader', CURRENT_TIMESTAMP),
+    ('Anna', 'Czytelnik', 'reader1@library.com', '1998-03-12', 'passwd', 'reader', CURRENT_TIMESTAMP),
     ('Ola', 'Rezerwująca', 'reader2@library.com', '1996-07-08', 'passwd', 'reader', CURRENT_TIMESTAMP),
-    ('Marta', 'Bibliotekarz', 'librarian@library.com', '1990-01-20', 'passwd', 'librarian', CURRENT_TIMESTAMP);
+    ('Marta', 'Bibliotekarz', 'librarian@library.com', '1990-01-20', 'passwd', 'librarian', CURRENT_TIMESTAMP),
+    ('Piotr', 'Czytający', 'reader3@library.com', '1992-11-03', 'passwd', 'reader', CURRENT_TIMESTAMP);
 
 INSERT INTO authors ("firstName", "lastName", birthdate, nationality)
 VALUES

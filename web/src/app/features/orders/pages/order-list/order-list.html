@@ -17,9 +17,15 @@
             <h2 class="text-2xl text-slate-900">Dodaj pozycję do realizacji</h2>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
             <div class="xl:col-span-2">
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Książka</label>
+                <div class="mb-3 flex flex-col gap-2 sm:flex-row">
+                    <input type="text" [(ngModel)]="bookSearch" (keyup.enter)="searchBooks()"
+                        placeholder="Szukaj książki po tytule lub autorze"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+                    <button type="button" class="secondary-button sm:shrink-0" (click)="searchBooks()">Szukaj</button>
+                </div>
                 <select [(ngModel)]="orderForm.bookId"
                     class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90">
                     <option value="">Wybierz książkę</option>
@@ -27,6 +33,10 @@
                     <option [value]="book.id">{{ book.title }}</option>
                     }
                 </select>
+                <div class="mt-3">
+                    <app-pagination [page]="bookPage()" [pageSize]="pageSize" [totalItems]="bookCount()"
+                        (pageChange)="setBookPage($event)" />
+                </div>
             </div>
 
             <div>
@@ -89,70 +99,76 @@
     }
 
     @if (!loading()) {
-    <div class="panel-card overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
-                    <th class="px-6 py-3 text-left">ID</th>
-                    <th class="px-6 py-3 text-left">Książka</th>
-                    <th class="px-6 py-3 text-left">Ilość</th>
-                    <th class="px-6 py-3 text-left">Dostawca</th>
-                    <th class="px-6 py-3 text-left">Zamówiono przez</th>
-                    <th class="px-6 py-3 text-left">Data zamówienia</th>
-                    <th class="px-6 py-3 text-left">Oczekiwana dostawa</th>
-                    <th class="px-6 py-3 text-left">Status</th>
-                    <th class="px-6 py-3 text-left">Akcje</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (order of orders(); track order.id) {
-                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-4 text-slate-400">#{{ order.id }}</td>
-                    <td class="px-6 py-4 font-medium text-slate-800">{{ order.book_title }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ order.quantity }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ order.supplier || '—' }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ order.requested_by_name ?? 'System' }}</td>
-                    <td class="px-6 py-4 text-slate-500">{{ order.requested_at }}</td>
-                    <td class="px-6 py-4 text-slate-500">{{ order.expected_delivery_date ?? '—' }}</td>
-                    <td class="px-6 py-4">
-                        <span class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(order.status) }}">
-                            {{ getStatusLabel(order.status) }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex gap-2">
-                            @if (order.status === 'draft') {
-                            <button (click)="requestSubmitOrder(order.id)"
-                                class="text-xs text-blue-600 hover:text-blue-800 underline">
-                                Złóż
-                            </button>
-                            }
-                            @if (order.status === 'submitted') {
-                            <button (click)="requestReceiveOrder(order.id)"
-                                class="text-xs text-green-600 hover:text-green-800 underline">
-                                Odbierz
-                            </button>
-                            }
-                            @if (order.status === 'draft' || order.status === 'submitted') {
-                            <button (click)="requestCancelOrder(order.id)"
-                                class="text-xs text-red-600 hover:text-red-800 underline">
-                                Anuluj
-                            </button>
-                            }
-                        </div>
-                    </td>
-                </tr>
-                }
+    <div class="space-y-5">
+        <div class="panel-card overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Książka</th>
+                        <th class="px-6 py-3 text-left">Ilość</th>
+                        <th class="px-6 py-3 text-left">Dostawca</th>
+                        <th class="px-6 py-3 text-left">Zamówiono przez</th>
+                        <th class="px-6 py-3 text-left">Data zamówienia</th>
+                        <th class="px-6 py-3 text-left">Oczekiwana dostawa</th>
+                        <th class="px-6 py-3 text-left">Status</th>
+                        <th class="px-6 py-3 text-left">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (order of orders(); track order.id) {
+                    <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 text-slate-400">#{{ order.id }}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">{{ order.book_title }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ order.quantity }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ order.supplier || '—' }}</td>
+                        <td class="px-6 py-4 text-slate-600">{{ order.requested_by_name ?? 'System' }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ order.requested_at }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ order.expected_delivery_date ?? '—' }}</td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(order.status) }}">
+                                {{ getStatusLabel(order.status) }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex gap-2 flex-wrap">
+                                @if (order.status === 'draft') {
+                                <button (click)="requestSubmitOrder(order.id)"
+                                    class="inline-flex items-center justify-center rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50">
+                                    Złóż
+                                </button>
+                                }
+                                @if (order.status === 'submitted') {
+                                <button (click)="requestReceiveOrder(order.id)"
+                                    class="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100">
+                                    Odbierz
+                                </button>
+                                }
+                                @if (order.status === 'draft' || order.status === 'submitted') {
+                                <button (click)="requestCancelOrder(order.id)"
+                                    class="inline-flex items-center justify-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-50">
+                                    Anuluj
+                                </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    }
 
-                @empty {
-                <tr>
-                    <td colspan="9" class="px-6 py-16 text-center text-slate-400 text-sm">
-                        Brak zamówień
-                    </td>
-                </tr>
-                }
-            </tbody>
-        </table>
+                    @empty {
+                    <tr>
+                        <td colspan="9" class="px-6 py-16 text-center text-slate-400 text-sm">
+                            Brak zamówień
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="count()"
+            (pageChange)="setPage($event)" />
     </div>
     }
 

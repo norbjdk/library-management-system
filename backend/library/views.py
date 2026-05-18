@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from library.models import (
+    DEFAULT_LOAN_PERIOD_DAYS,
+    LOAN_EXTENSION_STEP_DAYS,
     Author,
     Book,
     Category,
@@ -41,8 +43,10 @@ from library.serializers import (
 )
 from library.services import (
     build_book_availability_snapshot,
+    build_default_due_date,
     calculate_overdue_amount,
     create_notification,
+    issue_reservation_loan,
     update_loan_status,
 )
 from rest_framework import filters, viewsets
@@ -319,7 +323,8 @@ class LoanViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 {"copy": "Wybrany egzemplarz nie jest dostępny do wypożyczenia."}
             )
-        serializer.save()
+        due_date = serializer.validated_data.get("due_date") or build_default_due_date()
+        serializer.save(due_date=due_date)
         serializer.instance.copy.mark_unavailable()
         update_loan_status(serializer.instance)
 
@@ -346,6 +351,10 @@ class LoanViewSet(viewsets.ModelViewSet):
         user = getattr(request, "user", None)
         if not getattr(user, "is_authenticated", False):
             raise PermissionDenied("Musisz być zalogowany, aby wypożyczyć książkę.")
+        if not getattr(user, "is_staff", False):
+            raise PermissionDenied(
+                "Czytelnik może jedynie zarezerwować książkę. Wypożyczenie realizuje bibliotekarz."
+            )
 
         raw_book_id = request.data.get("book")
         if raw_book_id in {None, ""}:
@@ -358,9 +367,7 @@ class LoanViewSet(viewsets.ModelViewSet):
                 {"book": "Identyfikator książki jest niepoprawny."}
             ) from error
 
-        due_date = request.data.get("due_date") or (
-            timezone.localdate() + timedelta(days=14)
-        )
+        due_date = request.data.get("due_date") or build_default_due_date()
         book = get_object_or_404(Book, pk=book_id)
         available_copy = book.next_available_copy()
         if available_copy is None:
@@ -405,8 +412,11 @@ class LoanViewSet(viewsets.ModelViewSet):
             create_notification(
                 loan.user,
                 notification_type=NotificationType.FINE_ISSUED,
-                title="Fine issued after loan return",
-                message=f"Loan #{loan.id} was returned late. Fine amount: {overdue_amount}.",
+                title="Naliczono kare po spoznionym zwrocie",
+                message=(
+                    f"Wypozyczenie #{loan.id} zostalo zwrocone po terminie. "
+                    f"Kwota kary: {overdue_amount} PLN."
+                ),
                 related_object_type="loan",
                 related_object_id=loan.id,
             )
@@ -417,12 +427,16 @@ class LoanViewSet(viewsets.ModelViewSet):
     def extend(self, request, pk=None):
         loan = self.get_object()
         user = getattr(request, "user", None)
-        if not getattr(user, "is_staff", False):
+        if not getattr(user, "is_staff", False) and loan.user_id != getattr(
+            user, "id", None
+        ):
             raise PermissionDenied(
-                "Tylko pracownicy biblioteki mogą przedłużać wypożyczenia."
+                "Mozesz przedluzac tylko swoje wypozyczenia lub dzialac jako pracownik biblioteki."
             )
 
-        raw_extension_days = request.data.get("extension_days", 7)
+        raw_extension_days = request.data.get(
+            "extension_days", LOAN_EXTENSION_STEP_DAYS
+        )
         try:
             extension_days = int(raw_extension_days)
         except (TypeError, ValueError) as error:
@@ -434,11 +448,19 @@ class LoanViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 {"extension_days": "Liczba dni przedłużenia musi być dodatnia."}
             )
-
         if loan.return_date is not None or loan.status == LoanStatus.RETURNED:
             raise ValidationError(
                 {
                     "status": "Nie można przedłużyć wypożyczenia, które zostało już zwrócone."
+                }
+            )
+        if extension_days % LOAN_EXTENSION_STEP_DAYS != 0:
+            raise ValidationError(
+                {
+                    "extension_days": (
+                        "Przedłużenie musi obejmować pełne tygodnie "
+                        f"(wielokrotność {LOAN_EXTENSION_STEP_DAYS} dni)."
+                    )
                 }
             )
 
@@ -521,22 +543,15 @@ class ReservationViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(
                 "Tylko pracownicy biblioteki mogą realizować rezerwacje."
             )
-        available_copy = reservation.book.next_available_copy()
-        if available_copy is None:
-            raise ValidationError(
-                {"book": "Brak dostępnego egzemplarza do realizacji tej rezerwacji."}
-            )
-        reservation.fulfill()
-        available_copy.mark_unavailable()
-        create_notification(
-            reservation.user,
-            notification_type=NotificationType.RESERVATION_READY,
-            title="Rezerwacja zrealizowana",
-            message=f"Twoja rezerwacja #{reservation.id} książki {reservation.book.title} jest gotowa do odbioru.",
-            related_object_type="reservation",
-            related_object_id=reservation.id,
-        )
+        try:
+            issue_reservation_loan(reservation)
+        except ValueError as error:
+            raise ValidationError({"detail": str(error)}) from error
         return Response(self.get_serializer(reservation).data)
+
+    @action(detail=True, methods=["post"])
+    def issue(self, request, pk=None):
+        return self.fulfill(request, pk=pk)
 
 
 class FineViewSet(viewsets.ModelViewSet):

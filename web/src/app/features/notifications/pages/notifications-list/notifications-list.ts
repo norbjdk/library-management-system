@@ -1,21 +1,26 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { Notification, NotificationType } from '../../../../core/models/notification';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { ApiService } from '../../../../core/services/api.service';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-notifications-list',
-  imports: [Modal],
+  imports: [Modal, Pagination],
   templateUrl: './notifications-list.html',
   styleUrl: './notifications-list.css',
 })
 export class NotificationsList implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   activeFilter: 'all' | 'unread' | 'read' = 'all';
   notifications = signal<Notification[]>([]);
   loading = signal(false);
   markAllModalOpen = signal(false);
   error = signal<string | null>(null);
   count = signal(0);
+  currentPage = signal(1);
 
   filters: { label: string; value: 'all' | 'unread' | 'read' }[] = [
     { label: 'Wszystkie', value: 'all' },
@@ -29,11 +34,11 @@ export class NotificationsList implements OnInit {
     this.loadNotifications();
   }
 
-  loadNotifications() {
+  loadNotifications(page = this.currentPage()) {
     this.loading.set(true);
     this.error.set(null);
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(page) };
     if (this.activeFilter === 'unread') params['unread'] = 'true';
     if (this.activeFilter === 'read') params['unread'] = 'false';
 
@@ -41,6 +46,7 @@ export class NotificationsList implements OnInit {
       next: (response) => {
         this.notifications.set(response.results);
         this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -52,7 +58,13 @@ export class NotificationsList implements OnInit {
 
   setFilter(filter: 'all' | 'unread' | 'read') {
     this.activeFilter = filter;
-    this.loadNotifications();
+    this.currentPage.set(1);
+    this.loadNotifications(1);
+  }
+
+  setPage(page: number) {
+    this.currentPage.set(page);
+    this.loadNotifications(page);
   }
 
   markRead(id: number) {

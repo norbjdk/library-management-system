@@ -5,13 +5,14 @@
 .table-shell {
   overflow-x: auto;
   border: 1px solid rgba(22, 32, 51, 0.08);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 caption {
@@ -26,6 +27,9 @@ td {
   padding: 0.95rem 1rem;
   border-bottom: 1px solid rgba(22, 32, 51, 0.08);
   font-size: 0.92rem;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 th {
@@ -37,7 +41,7 @@ th {
 }
 
 tbody tr:hover {
-  background: rgba(246, 239, 231, 0.34);
+  background: rgba(246, 239, 231, 0.2);
 }
 
 tbody tr:last-child td {

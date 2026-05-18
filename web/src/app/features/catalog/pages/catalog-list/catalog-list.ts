@@ -1,40 +1,47 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Book } from '../../../../core/models/book';
+import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { ApiService } from '../../../../core/services/api.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Pagination } from '../../../../shared/components/pagination/pagination';
 import { normalizeText } from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-catalog-list',
-  imports: [FormsModule, RouterLink, Modal],
+  imports: [FormsModule, RouterLink, Modal, Pagination],
   templateUrl: './catalog-list.html',
   styleUrl: './catalog-list.css',
 })
 export class CatalogList implements OnInit {
+  readonly pageSize = DEFAULT_PAGE_SIZE;
+
   searchQuery = '';
   books = signal<Book[]>([]);
+  selectedReservationBook = signal<Book | null>(null);
+  reserveModalOpen = signal(false);
   loading = signal(false);
-  borrowingBookId = signal<number | null>(null);
-  borrowModalOpen = signal(false);
-  pendingBorrowBook = signal<Book | null>(null);
   error = signal<string | null>(null);
-  success = signal<string | null>(null);
   count = signal(0);
+  currentPage = signal(1);
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private auth: AuthService,
+    private router: Router,
+  ) {}
 
   ngOnInit() {
     this.loadBooks();
   }
 
-  loadBooks() {
+  loadBooks(page = this.currentPage()) {
     this.loading.set(true);
     this.error.set(null);
-    this.success.set(null);
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(page) };
     const searchQuery = normalizeText(this.searchQuery);
     this.searchQuery = searchQuery;
     if (searchQuery) params['q'] = searchQuery;
@@ -43,6 +50,7 @@ export class CatalogList implements OnInit {
       next: (response) => {
         this.books.set(response.results);
         this.count.set(response.count);
+        this.currentPage.set(page);
         this.loading.set(false);
       },
       error: () => {
@@ -53,73 +61,90 @@ export class CatalogList implements OnInit {
   }
 
   onSearch() {
-    this.loadBooks();
+    this.currentPage.set(1);
+    this.loadBooks(1);
   }
 
-  openBorrowModal(book: Book) {
-    if (this.borrowingBookId() !== null || this.getAvailableCopies(book) < 1) {
+  setPage(page: number) {
+    this.currentPage.set(page);
+    this.loadBooks(page);
+  }
+
+  isLoggedIn(): boolean {
+    return this.auth.isLoggedIn();
+  }
+
+  isStaff(): boolean {
+    return this.auth.isStaff();
+  }
+
+  getLoginQueryParams(bookId: number): { redirectTo: string } {
+    return { redirectTo: `/catalog/${bookId}` };
+  }
+
+  getReservationLabel(book: Book): string {
+    if (book.user_has_active_reservation) {
+      return 'Masz rezerwację';
+    }
+
+    return this.getAvailableCopies(book) > 0 ? 'Zarezerwuj' : 'Kolejka';
+  }
+
+  isReservationDisabled(book: Book): boolean {
+    return Boolean(book.user_has_active_reservation);
+  }
+
+  requestReservation(book: Book): void {
+    if (this.isReservationDisabled(book)) {
       return;
     }
 
-    this.pendingBorrowBook.set(book);
-    this.borrowModalOpen.set(true);
+    this.selectedReservationBook.set(book);
+    this.error.set(null);
+    this.reserveModalOpen.set(true);
   }
 
-  closeBorrowModal() {
-    this.borrowModalOpen.set(false);
-    this.pendingBorrowBook.set(null);
+  closeReservationModal(): void {
+    this.reserveModalOpen.set(false);
+    this.selectedReservationBook.set(null);
   }
 
-  confirmBorrow() {
-    const book = this.pendingBorrowBook();
+  confirmReservation(): void {
+    const book = this.selectedReservationBook();
     if (!book) {
       return;
     }
 
-    this.closeBorrowModal();
-    this.borrowBook(book);
-  }
-
-  private borrowBook(book: Book) {
-    if (this.borrowingBookId() !== null || this.getAvailableCopies(book) < 1) {
-      return;
-    }
-
-    this.borrowingBookId.set(book.id);
-    this.error.set(null);
-    this.success.set(null);
-
-    this.api.borrowBook(book.id).subscribe({
-      next: () => {
-        this.books.update((snapshot) =>
-          snapshot.map((item) => {
-            if (item.id !== book.id) {
-              return item;
-            }
-
-            return {
-              ...item,
-              available_copies: Math.max(0, item.available_copies - 1),
-              active_loans: item.active_loans + 1,
-            };
-          }),
-        );
-        this.success.set('Książka została wypożyczona i przypisana do Twojego konta.');
-        this.borrowingBookId.set(null);
-      },
-      error: (err) => {
-        this.error.set(
-          err?.error?.detail ??
-            err?.error?.book?.[0] ??
-            'Nie udało się wypożyczyć książki. Spróbuj ponownie.',
-        );
-        this.borrowingBookId.set(null);
-      },
+    this.closeReservationModal();
+    this.router.navigate(['/catalog', book.id], {
+      queryParams: { autoReserve: '1' },
     });
   }
 
-  isBorrowing(bookId: number): boolean {
-    return this.borrowingBookId() === bookId;
+  getReservationModalTitle(): string {
+    const book = this.selectedReservationBook();
+    if (!book) {
+      return 'Kontynuuj';
+    }
+
+    return this.getAvailableCopies(book) > 0 ? 'Zarezerwuj odbiór' : 'Dołącz do kolejki';
+  }
+
+  getReservationModalDescription(): string {
+    const book = this.selectedReservationBook();
+    if (!book) {
+      return 'Przejdziesz do szczegółów książki, gdzie dokończysz rezerwację.';
+    }
+
+    if (this.getAvailableCopies(book) > 0) {
+      return 'Najpierw przejdziemy do szczegółów książki, a potem zapiszesz egzemplarz do odbioru.';
+    }
+
+    return 'Najpierw przejdziemy do szczegółów książki, a potem dołączysz do kolejki rezerwacji.';
+  }
+
+  getReservationConfirmLabel(): string {
+    return 'Kontynuuj';
   }
 
   getPrimaryAuthor(book: Book): string {

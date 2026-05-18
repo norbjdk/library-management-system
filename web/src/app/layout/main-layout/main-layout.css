@@ -3,9 +3,19 @@
 }
 
 .app-main {
-  align-items: stretch;
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 main {
+  width: 100%;
   background: transparent;
+}
+
+@media (min-width: 1024px) {
+  .app-main {
+    flex-direction: row;
+    gap: 1.5rem;
+    padding: 0 1rem 1.5rem;
+  }
 }

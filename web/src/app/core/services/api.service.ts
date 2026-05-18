@@ -148,6 +148,10 @@ export class ApiService {
     return this.http.post<Reservation>(`${this.base}/reservations/${id}/cancel/`, {});
   }
 
+  issueReservation(id: number): Observable<Reservation> {
+    return this.http.post<Reservation>(`${this.base}/reservations/${id}/issue/`, {});
+  }
+
   fulfillReservation(id: number): Observable<Reservation> {
     return this.http.post<Reservation>(`${this.base}/reservations/${id}/fulfill/`, {});
   }

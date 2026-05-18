@@ -1,7 +1,11 @@
 <div class="page-shell">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div class="page-header">
         <a routerLink="/catalog" class="secondary-button">Powrót do katalogu</a>
+        @if (isLoggedIn()) {
         <a routerLink="/queue" class="secondary-button">Moja kolejka</a>
+        } @else {
+        <a routerLink="/login" [queryParams]="getLoginQueryParams()" class="secondary-button">Logowanie</a>
+        }
     </div>
 
     @if (error()) {
@@ -25,12 +29,12 @@
         <section class="panel-card p-6 md:p-8 space-y-6">
             <div>
                 <p class="page-kicker">Szczegóły książki</p>
-                <h1 class="text-4xl text-slate-900">{{ bookData.title }}</h1>
+                <h1 class="text-3xl md:text-4xl text-slate-900">{{ bookData.title }}</h1>
                 <p class="page-subtitle mt-3 text-base leading-7">{{ bookData.description ?? 'Brak opisu dla tego
                     rekordu.' }}</p>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
                 <article class="metric-card">
                     <span class="muted-label">Autorzy</span>
                     <strong class="!text-xl !leading-snug">{{ getAuthorList(bookData) }}</strong>
@@ -50,7 +54,7 @@
                 </article>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-3">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <article class="metric-card">
                     <span class="muted-label">Dostępne egzemplarze</span>
                     <strong>{{ availability()?.available_copies ?? bookData.available_copies }}</strong>
@@ -95,16 +99,27 @@
 
             @if (!isStaff()) {
             <div class="space-y-4">
-                @if (hasAvailableCopies()) {
-                <div class="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800">
-                    Ta książka jest dostępna od ręki. Możesz wypożyczyć ją jednym kliknięciem.
+                @if (!isLoggedIn()) {
+                <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                    Możesz przeglądać ten tytuł jako gość, ale rezerwację i wypożyczenie uruchamia dopiero konto
+                    czytelnika.
                 </div>
 
-                <button type="button" class="accent-button w-full" [disabled]="borrowing()"
-                    (click)="requestBorrowConfirmation()">
-                    {{ borrowing() ? 'Wypożyczanie...' : 'Wypożycz teraz' }}
-                </button>
-                } @else {
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a routerLink="/login" [queryParams]="getLoginQueryParams()"
+                        class="secondary-button w-full text-center">
+                        Zaloguj się
+                    </a>
+                    <a routerLink="/login" [queryParams]="getLoginQueryParams('register')"
+                        class="accent-button w-full text-center">
+                        Załóż konto
+                    </a>
+                </div>
+                } @else if (hasAvailableCopies()) {
+                <div class="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800">
+                    Egzemplarz jest dostępny. Po potwierdzeniu rezerwacji bibliotekarz wyda książkę na 7 dni.
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Ważność rezerwacji</label>
                     <input type="date" [(ngModel)]="reservationExpiry"
@@ -120,7 +135,30 @@
                 <button type="button" class="accent-button w-full"
                     [disabled]="submittingReservation() || hasExistingReservation()"
                     (click)="requestReservationConfirmation()">
-                    {{ submittingReservation() ? 'Zapisywanie rezerwacji...' : 'Dołącz do kolejki rezerwacji' }}
+                    {{ submittingReservation() ? getReservationSubmittingLabel() : getReservationButtonLabel() }}
+                </button>
+                } @else {
+                <div class="rounded-2xl bg-slate-100/80 p-4 text-sm text-slate-700">
+                    Brak wolnych egzemplarzy. Dołączysz do kolejki rezerwacji, a bibliotekarz wyda książkę, gdy
+                    nadejdzie Twoja kolej.
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Ważność rezerwacji</label>
+                    <input type="date" [(ngModel)]="reservationExpiry"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+                </div>
+
+                @if (hasExistingReservation()) {
+                <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                    Masz już aktywną rezerwację tej książki. Kolejną możesz utworzyć po zakończeniu obecnej.
+                </div>
+                }
+
+                <button type="button" class="accent-button w-full"
+                    [disabled]="submittingReservation() || hasExistingReservation()"
+                    (click)="requestReservationConfirmation()">
+                    {{ submittingReservation() ? getReservationSubmittingLabel() : getReservationButtonLabel() }}
                 </button>
                 }
             </div>
@@ -143,7 +181,9 @@
                 <thead>
                     <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
                         <th class="px-6 py-3 text-left">Egzemplarz</th>
+                        @if (isStaff()) {
                         <th class="px-6 py-3 text-left">Lokalizacja</th>
+                        }
                         <th class="px-6 py-3 text-left">Stan fizyczny</th>
                         <th class="px-6 py-3 text-left">Status</th>
                     </tr>
@@ -152,7 +192,9 @@
                     @for (copy of copies(); track copy.id) {
                     <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4 text-slate-800 font-medium">#{{ copy.id }}</td>
+                        @if (isStaff()) {
                         <td class="px-6 py-4 text-slate-600">{{ getLocationLabel(copy) }}</td>
+                        }
                         <td class="px-6 py-4 text-slate-600">{{ getConditionLabel(copy.condition) }}</td>
                         <td class="px-6 py-4">
                             <span class="text-xs font-medium px-2 py-1 rounded-full {{ getCopyStatusClasses(copy) }}">
@@ -164,7 +206,8 @@
 
                     @empty {
                     <tr>
-                        <td colspan="4" class="px-6 py-14 text-center text-slate-400">Brak egzemplarzy dla tej książki.
+                        <td [attr.colspan]="isStaff() ? 4 : 3" class="px-6 py-14 text-center text-slate-400">Brak
+                            egzemplarzy dla tej książki.
                         </td>
                     </tr>
                     }
@@ -174,23 +217,13 @@
     </section>
     }
 
-    <app-modal [open]="borrowModalOpen()" title="Potwierdź wypożyczenie"
-        description="Egzemplarz zostanie przypisany do Twojego konta i pojawi się na liście wypożyczeń."
-        (closed)="closeBorrowModal()">
-        <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
-            <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeBorrowModal()">Anuluj</button>
-            <button type="button" class="accent-button w-full sm:w-auto" (click)="confirmBorrow()">Wypożycz</button>
-        </div>
-    </app-modal>
-
-    <app-modal [open]="reserveModalOpen()" title="Potwierdź rezerwację"
-        description="Dodamy książkę do Twojej kolejki rezerwacji z wybraną datą ważności."
-        (closed)="closeReservationModal()">
+    <app-modal [open]="reserveModalOpen()" [title]="getReservationModalTitle()"
+        [description]="getReservationModalDescription()" (closed)="closeReservationModal()">
         <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
             <button type="button" class="secondary-button w-full sm:w-auto"
                 (click)="closeReservationModal()">Anuluj</button>
             <button type="button" class="accent-button w-full sm:w-auto"
-                (click)="confirmReservation()">Rezerwuj</button>
+                (click)="confirmReservation()">Potwierdź</button>
         </div>
     </app-modal>
 </div>

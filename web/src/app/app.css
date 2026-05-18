@@ -1,4 +1,6 @@
 :root {
+  --nav-height: 80px;
+  --sidebar-width: 18rem;
   --app-ink-strong: #162033;
   --app-ink-muted: #5d6a82;
   --app-ink-soft: #7a879b;
@@ -6,12 +8,12 @@
   --app-accent-strong: #9f4f1c;
   --app-support: #2d7b78;
   --app-support-soft: rgba(45, 123, 120, 0.14);
-  --app-surface: rgba(255, 251, 247, 0.78);
-  --app-surface-strong: rgba(255, 255, 255, 0.88);
+  --app-surface: rgba(255, 250, 246, 0.94);
+  --app-surface-strong: rgba(255, 255, 255, 0.98);
   --app-surface-dark: rgba(18, 26, 43, 0.9);
-  --app-border: rgba(22, 32, 51, 0.12);
-  --app-border-strong: rgba(22, 32, 51, 0.2);
-  --app-shadow: 0 24px 60px rgba(28, 33, 46, 0.12);
+  --app-border: rgba(22, 32, 51, 0.1);
+  --app-border-strong: rgba(22, 32, 51, 0.18);
+  --app-shadow: 0 12px 30px rgba(28, 33, 46, 0.08);
 }
 
 html {
@@ -23,10 +25,7 @@ body {
   margin: 0;
   color: var(--app-ink-strong);
   font-family: 'Manrope', 'Trebuchet MS', 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(197, 106, 45, 0.22), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(45, 123, 120, 0.2), transparent 24%),
-    linear-gradient(135deg, #f6efe7 0%, #eff4f2 55%, #f7f2ec 100%);
+  background: linear-gradient(180deg, #f6f1ea 0%, #f3f5f7 52%, #eef3f5 100%);
 }
 
 body::before {
@@ -34,12 +33,10 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at center, black, transparent 78%);
-  opacity: 0.45;
+  background:
+    radial-gradient(circle at top right, rgba(197, 106, 45, 0.09), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(45, 123, 120, 0.08), transparent 30%);
+  opacity: 1;
 }
 
 h1,
@@ -82,8 +79,8 @@ textarea {
   place-items: center;
   align-items: center;
   padding: 1.5rem;
-  background: rgba(246, 239, 231, 0.72);
-  backdrop-filter: blur(6px);
+  background: rgba(246, 241, 234, 0.82);
+  backdrop-filter: blur(4px);
   z-index: 50;
 }
 
@@ -92,7 +89,7 @@ textarea {
 }
 
 .content-shell {
-  padding-top: 2rem;
+  padding-top: 1.5rem;
   padding-bottom: 2rem;
 }
 
@@ -102,10 +99,9 @@ textarea {
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 24px;
+  border-radius: 18px;
   background: var(--app-surface-strong);
   box-shadow: var(--app-shadow);
-  backdrop-filter: blur(18px);
 }
 
 .panel-card > * {
@@ -155,15 +151,15 @@ textarea {
   min-width: 0;
   max-width: 100%;
   border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
+  border-radius: 14px;
+  background: var(--app-accent);
   color: white;
-  padding: 0.8rem 1.3rem;
+  padding: 0.78rem 1.15rem;
   font-weight: 700;
   text-align: center;
   white-space: normal;
-  overflow-wrap: anywhere;
-  box-shadow: 0 18px 34px rgba(197, 106, 45, 0.22);
+  overflow-wrap: break-word;
+  box-shadow: 0 8px 20px rgba(197, 106, 45, 0.16);
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -172,8 +168,8 @@ textarea {
 
 .accent-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.03);
-  box-shadow: 0 22px 42px rgba(197, 106, 45, 0.28);
+  filter: brightness(0.98);
+  box-shadow: 0 10px 24px rgba(197, 106, 45, 0.18);
 }
 
 .accent-button:disabled {
@@ -189,14 +185,14 @@ textarea {
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--app-border-strong);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.68);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
   color: var(--app-ink-strong);
-  padding: 0.78rem 1.2rem;
+  padding: 0.76rem 1.1rem;
   font-weight: 700;
   text-align: center;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   transition:
     border-color 160ms ease,
     background 160ms ease,
@@ -212,19 +208,22 @@ textarea {
 .metric-card {
   display: flex;
   flex-direction: column;
+  gap: 0.35rem;
   min-width: 0;
   border: 1px solid rgba(22, 32, 51, 0.08);
-  border-radius: 22px;
+  border-radius: 16px;
   padding: 1.1rem 1.2rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 243, 238, 0.74));
+  background: #fbfaf8;
 }
 
 .metric-card strong {
   display: block;
-  margin-top: 0.35rem;
   font-size: clamp(1.15rem, 1.5vw, 1.8rem);
-  line-height: 1.1;
-  overflow-wrap: anywhere;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  text-wrap: balance;
 }
 
 .muted-label {
@@ -232,23 +231,69 @@ textarea {
   font-size: 0.85rem;
 }
 
+.page-header h1,
+.page-header h2,
+.page-shell h1,
+.page-shell h2,
+.page-shell h3,
+.panel-card p,
+.metric-card .muted-label {
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+}
+
+.page-header h1,
+.page-header h2,
+.page-shell h1,
+.page-shell h2,
+.page-shell h3 {
+  text-wrap: balance;
+}
+
+.panel-card p,
+.metric-card .muted-label {
+  text-wrap: pretty;
+}
+
 .empty-state {
   border: 1px dashed rgba(22, 32, 51, 0.22);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.64);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .nav-surface {
-  background: linear-gradient(135deg, rgba(16, 24, 39, 0.94), rgba(28, 39, 61, 0.88));
-  backdrop-filter: blur(18px);
+  background: rgba(16, 24, 39, 0.96);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 42px rgba(12, 18, 29, 0.16);
+  box-shadow: 0 8px 20px rgba(12, 18, 29, 0.12);
 }
 
 .sidebar-surface {
-  background: linear-gradient(180deg, rgba(17, 26, 44, 0.96), rgba(30, 39, 63, 0.92));
-  backdrop-filter: blur(18px);
+  background: linear-gradient(180deg, rgba(19, 28, 44, 0.98), rgba(25, 36, 56, 0.96));
+  backdrop-filter: blur(10px);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.page-shell table,
+.feature-shell table,
+.user-list-shell table,
+.panel-card table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.page-shell th,
+.page-shell td,
+.feature-shell th,
+.feature-shell td,
+.user-list-shell th,
+.user-list-shell td,
+.panel-card th,
+.panel-card td {
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .auth-stage {

@@ -1,4 +1,4 @@
-@if (totalItems() > 0) {
+@if (totalPages() > 1) {
 <nav class="pagination-shell" aria-label="Paginacja">
     <button type="button" (click)="goTo(page() - 1)" [disabled]="page() <= 1">Poprzednia</button>
 

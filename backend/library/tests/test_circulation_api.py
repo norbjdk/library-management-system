@@ -19,6 +19,20 @@ from .base import LibraryAPITestCase
 
 
 class CirculationApiTests(LibraryAPITestCase):
+    def test_staff_can_create_loan_without_due_date_and_defaults_to_one_week(self):
+        payload = {
+            "copy": self.available_copy.id,
+            "user": self.reader.id,
+        }
+
+        response = self.authenticated_client(self.staff).post(
+            reverse("loan-list"), payload, format="json"
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created_loan = Loan.objects.get(pk=response.data["id"])
+        self.assertEqual(created_loan.due_date, self.today + timedelta(days=7))
+
     def test_staff_can_create_loan_and_marks_copy_unavailable(self):
         payload = {
             "copy": self.available_copy.id,
@@ -64,18 +78,14 @@ class CirculationApiTests(LibraryAPITestCase):
 
         self.assertEqual(response.status_code, 403)
 
-    def test_reader_can_borrow_available_book_with_quick_action(self):
+    def test_reader_cannot_borrow_book_without_librarian(self):
         response = self.authenticated_client(self.reader).post(
             reverse("loan-borrow-book"),
             {"book": self.book.id},
             format="json",
         )
 
-        self.assertEqual(response.status_code, 201)
-        self.available_copy.refresh_from_db()
-        self.assertFalse(self.available_copy.available)
-        self.assertEqual(response.data["book_id"], self.book.id)
-        self.assertEqual(response.data["user"], self.reader.id)
+        self.assertEqual(response.status_code, 403)
 
     def test_mark_overdue_updates_loan_status(self):
         response = self.authenticated_client(self.staff).post(
@@ -121,26 +131,36 @@ class CirculationApiTests(LibraryAPITestCase):
 
         response = self.authenticated_client(self.staff).post(
             reverse("loan-extend", args=[loan.id]),
-            {"extension_days": 10},
+            {"extension_days": 14},
             format="json",
         )
 
         self.assertEqual(response.status_code, 200)
         loan.refresh_from_db()
-        self.assertEqual(loan.due_date, self.today + timedelta(days=14))
+        self.assertEqual(loan.due_date, self.today + timedelta(days=18))
         self.assertEqual(loan.status, LoanStatus.ACTIVE)
 
     def test_extending_overdue_loan_uses_today_as_baseline(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("loan-extend", args=[self.loan.id]),
+            {"extension_days": 7},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.due_date, self.today + timedelta(days=7))
+        self.assertEqual(self.loan.status, LoanStatus.ACTIVE)
+
+    def test_loan_extension_requires_full_weeks(self):
         response = self.authenticated_client(self.staff).post(
             reverse("loan-extend", args=[self.loan.id]),
             {"extension_days": 5},
             format="json",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.loan.refresh_from_db()
-        self.assertEqual(self.loan.due_date, self.today + timedelta(days=5))
-        self.assertEqual(self.loan.status, LoanStatus.ACTIVE)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("extension_days", response.data)
 
     def test_cannot_extend_returned_loan(self):
         self.loan.return_copy()
@@ -154,14 +174,25 @@ class CirculationApiTests(LibraryAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("status", response.data)
 
-    def test_reader_cannot_extend_loan(self):
+    def test_reader_can_extend_own_loan(self):
         response = self.authenticated_client(self.reader).post(
             reverse("loan-extend", args=[self.loan.id]),
-            {"extension_days": 3},
+            {"extension_days": 7},
             format="json",
         )
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.due_date, self.today + timedelta(days=7))
+
+    def test_other_reader_cannot_extend_someone_elses_loan(self):
+        response = self.authenticated_client(self.other_reader).post(
+            reverse("loan-extend", args=[self.loan.id]),
+            {"extension_days": 7},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_reservation_queue_positions_and_ready_dates(self):
         response = self.authenticated_client(self.staff).get(
@@ -169,7 +200,7 @@ class CirculationApiTests(LibraryAPITestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        reservations = {item["id"]: item for item in response.data}
+        reservations = {item["id"]: item for item in response.data["results"]}
         self.assertEqual(reservations[self.reservation.id]["queue_position"], 1)
         self.assertEqual(
             reservations[self.reservation.id]["estimated_ready_date"],
@@ -200,14 +231,25 @@ class CirculationApiTests(LibraryAPITestCase):
         self.available_copy.refresh_from_db()
         self.assertEqual(self.reservation.status, ReservationStatus.FULFILLED)
         self.assertFalse(self.available_copy.available)
+        issued_loan = Loan.objects.get(copy=self.available_copy, user=self.reader)
+        self.assertEqual(issued_loan.loan_date, self.today)
+        self.assertEqual(issued_loan.due_date, self.today + timedelta(days=7))
         self.assertTrue(
             Notification.objects.filter(
                 user=self.reader,
-                notification_type=NotificationType.RESERVATION_READY,
-                related_object_type="reservation",
-                related_object_id=self.reservation.id,
+                notification_type=NotificationType.SYSTEM,
+                related_object_type="loan",
+                related_object_id=issued_loan.id,
             ).exists()
         )
+
+    def test_staff_cannot_issue_reservation_out_of_queue_order(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("reservation-fulfill", args=[self.second_reservation.id])
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.data)
 
     def test_fulfill_reservation_without_loanable_copy_returns_400(self):
         self.available_copy.mark_unavailable()
@@ -217,7 +259,7 @@ class CirculationApiTests(LibraryAPITestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("book", response.data)
+        self.assertIn("detail", response.data)
 
     def test_mark_notification_read_sets_timestamp(self):
         response = self.authenticated_client(self.reader).post(

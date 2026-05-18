@@ -67,10 +67,14 @@ class LibraryAPITestCase(TestCase):
             country="Poland",
         )
         cls.category = Category.objects.create(
-            name="Fantasy",
-            description="Literatura fantasy i science-fiction",
+            name="Fantastyka",
+            description="Literatura fantastyczna i fantastyka naukowa",
         )
-        cls.location = Location.objects.create(shelf="A1", section="Fantasy", floor=1)
+        cls.location = Location.objects.create(
+            shelf="A1",
+            section="Fantastyka",
+            floor=1,
+        )
         cls.book = Book.objects.create(
             title="Harry Potter i Kamień Filozoficzny",
             ean="111-11-1111-111-1",

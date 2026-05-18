@@ -18,6 +18,7 @@ from library.models import (
     Order,
     Publisher,
     Reservation,
+    ReservationStatus,
 )
 from library.services import calculate_reservation_queue_position
 from rest_framework import serializers
@@ -92,6 +93,7 @@ class BookSerializer(serializers.ModelSerializer):
     active_loans = serializers.SerializerMethodField()
     active_reservations = serializers.SerializerMethodField()
     estimated_wait_days = serializers.SerializerMethodField()
+    user_has_active_reservation = serializers.SerializerMethodField()
 
     class Meta:
         model = Book
@@ -112,6 +114,7 @@ class BookSerializer(serializers.ModelSerializer):
             "active_loans",
             "active_reservations",
             "estimated_wait_days",
+            "user_has_active_reservation",
         ]
 
     def get_copies_count(self, obj):
@@ -128,6 +131,22 @@ class BookSerializer(serializers.ModelSerializer):
 
     def get_estimated_wait_days(self, obj):
         return obj.estimated_wait_days()
+
+    def get_user_has_active_reservation(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not getattr(user, "is_authenticated", False):
+            return False
+
+        if getattr(user, "is_staff", False):
+            return False
+
+        return Reservation.objects.filter(
+            book=obj,
+            user_id=user.id,
+            status=ReservationStatus.PENDING,
+        ).exists()
 
     def create(self, validated_data):
         authors = validated_data.pop("authors", [])
@@ -230,6 +249,9 @@ class LoanSerializer(serializers.ModelSerializer):
             "overdue_days",
             "is_overdue",
         ]
+        extra_kwargs = {
+            "due_date": {"required": False},
+        }
 
     def get_user_name(self, obj):
         return obj.user.full_name

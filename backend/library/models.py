@@ -8,16 +8,16 @@ from django.utils import timezone
 
 
 class LibraryRole(models.TextChoices):
-    READER = "reader", "Reader"
-    LIBRARIAN = "librarian", "Librarian"
-    ADMIN = "admin", "Admin"
+    READER = "reader", "Czytelnik"
+    LIBRARIAN = "librarian", "Bibliotekarz"
+    ADMIN = "admin", "Administrator"
 
 
 class BookCondition(models.TextChoices):
-    NEW = "new", "New"
-    GOOD = "good", "Good"
-    WORN = "worn", "Worn"
-    DAMAGED = "damaged", "Damaged"
+    NEW = "new", "Nowy"
+    GOOD = "good", "Dobry"
+    WORN = "worn", "Zuzyty"
+    DAMAGED = "damaged", "Uszkodzony"
 
 
 LOANABLE_BOOK_CONDITIONS = (
@@ -26,36 +26,38 @@ LOANABLE_BOOK_CONDITIONS = (
     BookCondition.WORN,
 )
 
+DEFAULT_LOAN_PERIOD_DAYS = 7
+LOAN_EXTENSION_STEP_DAYS = 7
 RESERVATION_QUEUE_STEP_DAYS = 7
 
 
 class LoanStatus(models.TextChoices):
-    ACTIVE = "active", "Active"
-    RETURNED = "returned", "Returned"
-    OVERDUE = "overdue", "Overdue"
+    ACTIVE = "active", "Aktywne"
+    RETURNED = "returned", "Zwrocone"
+    OVERDUE = "overdue", "Przeterminowane"
 
 
 class ReservationStatus(models.TextChoices):
-    PENDING = "pending", "Pending"
-    FULFILLED = "fulfilled", "Fulfilled"
-    CANCELLED = "cancelled", "Cancelled"
-    EXPIRED = "expired", "Expired"
+    PENDING = "pending", "Oczekujace"
+    FULFILLED = "fulfilled", "Zrealizowane"
+    CANCELLED = "cancelled", "Anulowane"
+    EXPIRED = "expired", "Wygasle"
 
 
 class OrderStatus(models.TextChoices):
-    DRAFT = "draft", "Draft"
-    SUBMITTED = "submitted", "Submitted"
-    PROCESSING = "processing", "Processing"
-    RECEIVED = "received", "Received"
-    CANCELLED = "cancelled", "Cancelled"
+    DRAFT = "draft", "Szkic"
+    SUBMITTED = "submitted", "Zlozone"
+    PROCESSING = "processing", "W realizacji"
+    RECEIVED = "received", "Odebrane"
+    CANCELLED = "cancelled", "Anulowane"
 
 
 class NotificationType(models.TextChoices):
-    LOAN_DUE = "loan_due", "Loan due"
-    RESERVATION_READY = "reservation_ready", "Reservation ready"
-    FINE_ISSUED = "fine_issued", "Fine issued"
-    ORDER_UPDATE = "order_update", "Order update"
-    SYSTEM = "system", "System"
+    LOAN_DUE = "loan_due", "Termin zwrotu"
+    RESERVATION_READY = "reservation_ready", "Rezerwacja gotowa"
+    FINE_ISSUED = "fine_issued", "Naliczono kare"
+    ORDER_UPDATE = "order_update", "Aktualizacja zamowienia"
+    SYSTEM = "system", "Systemowe"
 
 
 class LibraryUser(models.Model):
@@ -140,7 +142,7 @@ class Location(models.Model):
         if self.section:
             parts.append(self.section)
         if self.floor is not None:
-            parts.append(f"floor {self.floor}")
+            parts.append(f"pietro {self.floor}")
         return " / ".join(parts)
 
 
@@ -380,6 +382,10 @@ class Loan(models.Model):
             raise ValueError("Tylko aktywne wypożyczenie można przedłużyć.")
         if extension_days <= 0:
             raise ValueError("Liczba dni przedłużenia musi być dodatnia.")
+        if extension_days % LOAN_EXTENSION_STEP_DAYS != 0:
+            raise ValueError(
+                "Przedłużenie musi obejmować pełne tygodnie (wielokrotność 7 dni)."
+            )
 
         reference_date = as_of or timezone.localdate()
         baseline_due_date = (

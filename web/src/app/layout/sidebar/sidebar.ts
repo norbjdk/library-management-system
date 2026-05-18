@@ -10,36 +10,31 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class SidebarComponent {
   allItems = [
-    { label: 'Dashboard', path: '/admin', icon: '📊', staffOnly: true },
+    { label: 'Panel', path: '/admin', icon: '📊', staffOnly: true },
     { label: 'Użytkownicy', path: '/admin/users', icon: '👥', staffOnly: true },
-    { label: 'Katalog', path: '/catalog', icon: '📚', staffOnly: false },
-    { label: 'Wypożyczenia', path: '/loans', icon: '🔄', staffOnly: false },
-    { label: 'Kolejka', path: '/queue', icon: '⏳', staffOnly: false },
-    { label: 'Kary', path: '/fines', icon: '💰', staffOnly: false },
+    { label: 'Katalog', path: '/catalog', icon: '📚', staffOnly: false, public: true },
+    { label: 'Kategorie', path: '/categories', icon: '🗂️', staffOnly: false, public: true },
+    { label: 'Wypożyczenia', path: '/loans', icon: '🔄', staffOnly: false, public: false },
+    { label: 'Kolejka', path: '/queue', icon: '⏳', staffOnly: false, public: false },
+    { label: 'Kary', path: '/fines', icon: '💰', staffOnly: false, public: false },
     { label: 'Zamówienia', path: '/orders', icon: '📦', staffOnly: true },
-    { label: 'Powiadomienia', path: '/notifications', icon: '🔔', staffOnly: false },
-    { label: 'Profil', path: '/profile', icon: '🪪', staffOnly: false },
+    { label: 'Powiadomienia', path: '/notifications', icon: '🔔', staffOnly: false, public: false },
+    { label: 'Profil', path: '/profile', icon: '🪪', staffOnly: false, public: false },
   ];
 
-  menuItems = computed(() =>
-    this.auth.isStaff() ? this.allItems : this.allItems.filter((i) => !i.staffOnly),
-  );
+  menuItems = computed(() => {
+    if (this.auth.isStaff()) {
+      return this.allItems;
+    }
 
-  fullName = computed(() => {
-    const user = this.auth.user();
-    if (!user) return '';
-    return `${user.first_name} ${user.last_name}`;
+    if (this.auth.isLoggedIn()) {
+      return this.allItems.filter((item) => !item.staffOnly);
+    }
+
+    return this.allItems.filter((item) => item.public);
   });
 
-  roleLabel = computed(() => {
-    const role = this.auth.role();
-    const labels: Record<string, string> = {
-      admin: 'Administrator',
-      librarian: 'Bibliotekarz',
-      reader: 'Czytelnik',
-    };
-    return role ? (labels[role] ?? role) : '';
-  });
+  isLoggedIn = computed(() => this.auth.isLoggedIn());
 
   constructor(private auth: AuthService) {}
 }

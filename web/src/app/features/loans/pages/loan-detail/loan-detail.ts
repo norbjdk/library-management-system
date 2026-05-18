@@ -70,7 +70,11 @@ export class LoanDetail implements OnInit {
 
   canExtend = computed(() => {
     const current = this.loan();
-    return !!current && current.status !== 'returned' && this.auth.isStaff();
+    return (
+      !!current &&
+      current.status !== 'returned' &&
+      (this.auth.isStaff() || current.user === this.auth.user()?.id)
+    );
   });
 
   showReadOnlyNotice = computed(() => {
@@ -157,7 +161,7 @@ export class LoanDetail implements OnInit {
       next: (loan) => {
         this.loan.set(loan);
         this.extending.set(false);
-        this.success.set('Termin zwrotu został przedłużony o 7 dni.');
+        this.success.set('Termin zwrotu został przedłużony o kolejny tydzień.');
       },
       error: (err) => {
         this.error.set(err?.error?.detail ?? 'Nie udało się przedłużyć wypożyczenia.');

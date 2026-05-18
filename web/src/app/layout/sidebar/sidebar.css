@@ -3,7 +3,27 @@
 }
 
 aside {
-  position: sticky;
-  top: 88px;
-  height: calc(100vh - 88px);
+  margin: 1rem 0 0;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  :host {
+    width: var(--sidebar-width, 18rem);
+    flex: 0 0 var(--sidebar-width, 18rem);
+    align-self: flex-start;
+    position: sticky;
+    top: calc(var(--nav-height, 80px) + 1rem);
+  }
+
+  aside {
+    height: calc(100vh - var(--nav-height, 80px) - 2rem);
+    margin-top: 0;
+  }
+
+  nav {
+    min-height: 0;
+    overflow-y: auto;
+  }
 }
