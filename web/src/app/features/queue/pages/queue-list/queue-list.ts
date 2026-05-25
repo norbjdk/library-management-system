@@ -6,6 +6,7 @@ import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Pagination } from '../../../../shared/components/pagination/pagination';
+import { getTodayIsoDate } from '../../../../shared/utils/form-normalization';
 
 @Component({
   selector: 'app-queue-list',
@@ -156,5 +157,13 @@ export class QueueList implements OnInit {
     };
 
     return classes[status];
+  }
+
+  canIssueReservation(reservation: Reservation): boolean {
+    return Boolean(
+      reservation.status === 'pending' &&
+      reservation.estimated_ready_date &&
+      reservation.estimated_ready_date <= getTodayIsoDate(),
+    );
   }
 }

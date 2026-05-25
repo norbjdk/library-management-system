@@ -103,13 +103,9 @@ export class UserProfileComponent implements OnInit {
 
     this.api.updateProfile({ ...this.form }).subscribe({
       next: (profile) => {
-        const currentProfile = this.profile();
-        const nextProfile = currentProfile?.summary
-          ? { ...profile, summary: currentProfile.summary }
-          : profile;
-
-        this.profile.set(nextProfile as UserProfile);
-        this.auth.updateCurrentUser(nextProfile);
+        this.profile.set(profile);
+        this.syncForm(profile);
+        this.auth.updateCurrentUser(profile);
         this.success.set('Profil został zapisany.');
         this.saving.set(false);
       },
@@ -133,5 +129,21 @@ export class UserProfileComponent implements OnInit {
   confirmSaveProfile() {
     this.closeSaveModal();
     this.saveProfile();
+  }
+
+  getLoanSummaryLabel(profile: UserProfile): string {
+    return profile.is_staff ? 'Aktywne wypożyczenia w systemie' : 'Aktywne wypożyczenia';
+  }
+
+  getReservationSummaryLabel(profile: UserProfile): string {
+    return profile.is_staff ? 'Aktywne rezerwacje w systemie' : 'Rezerwacje';
+  }
+
+  getNotificationSummaryLabel(profile: UserProfile): string {
+    return profile.is_staff ? 'Widoczne powiadomienia' : 'Powiadomienia';
+  }
+
+  getFineSummaryLabel(profile: UserProfile): string {
+    return profile.is_staff ? 'Łączna kwota kar w systemie' : 'Łączna kwota kar';
   }
 }

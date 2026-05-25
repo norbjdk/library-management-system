@@ -11,7 +11,7 @@
                 }
             </div>
 
-            @if (dismissible()) {
+            @if (dismissible() && showCloseButton()) {
             <button type="button" class="modal-close" (click)="close()">{{ closeLabel() }}</button>
             }
         </header>

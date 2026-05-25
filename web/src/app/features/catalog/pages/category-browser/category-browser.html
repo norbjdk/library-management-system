@@ -91,10 +91,11 @@
                   <p class="text-sm text-slate-500">{{ getAuthorNames(book) }}</p>
                 </div>
                 <span class="rounded-full px-3 py-1 text-xs font-medium"
-                  [class.bg-emerald-100]="book.available_copies > 0"
-                  [class.text-emerald-700]="book.available_copies > 0" [class.bg-rose-100]="book.available_copies < 1"
-                  [class.text-rose-700]="book.available_copies < 1">
-                  {{ book.available_copies > 0 ? 'Dostępna' : 'W kolejce' }}
+                  [class.bg-emerald-100]="getBorrowableCopies(book) > 0"
+                  [class.text-emerald-700]="getBorrowableCopies(book) > 0"
+                  [class.bg-amber-100]="getBorrowableCopies(book) < 1"
+                  [class.text-amber-700]="getBorrowableCopies(book) < 1">
+                  {{ getBorrowableCopies(book) > 0 ? 'Dostępna' : 'Zajęta' }}
                 </span>
               </div>
               <p class="text-sm text-slate-600">Rok wydania: {{ book.publish_year ?? 'brak danych' }}</p>
@@ -134,7 +135,7 @@
     </section>
   </div>
 
-  <app-modal [open]="reserveModalOpen()" [title]="getReservationModalTitle()"
+  <app-modal [open]="reserveModalOpen()" [title]="getReservationModalTitle()" [showCloseButton]="false"
     [description]="getReservationModalDescription()" (closed)="closeReservationModal()">
     <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
       <button type="button" class="secondary-button w-full sm:w-auto" (click)="closeReservationModal()">

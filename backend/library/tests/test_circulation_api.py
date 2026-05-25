@@ -87,6 +87,19 @@ class CirculationApiTests(LibraryAPITestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_staff_cannot_borrow_book_when_available_copy_is_reserved_for_queue(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("loan-borrow-book"),
+            {"book": self.book.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data["book"],
+            "Ta książka nie ma teraz dostępnych egzemplarzy do nowego wypożyczenia.",
+        )
+
     def test_mark_overdue_updates_loan_status(self):
         response = self.authenticated_client(self.staff).post(
             reverse("loan-mark-overdue", args=[self.loan.id])
@@ -271,6 +284,31 @@ class CirculationApiTests(LibraryAPITestCase):
         self.assertTrue(self.unread_notification.is_read)
         self.assertIsNotNone(self.unread_notification.read_at)
 
+    def test_reader_can_delete_own_notification(self):
+        response = self.authenticated_client(self.reader).delete(
+            reverse("notification-detail", args=[self.unread_notification.id])
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(
+            Notification.objects.filter(pk=self.unread_notification.id).exists()
+        )
+
+    def test_reader_cannot_delete_other_user_notification(self):
+        other_notification = Notification.objects.create(
+            user=self.other_reader,
+            notification_type=NotificationType.SYSTEM,
+            title="Cudze powiadomienie",
+            message="Nie powinno dac sie go usunac.",
+        )
+
+        response = self.authenticated_client(self.reader).delete(
+            reverse("notification-detail", args=[other_notification.id])
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Notification.objects.filter(pk=other_notification.id).exists())
+
     def test_staff_can_progress_order_statuses(self):
         client = self.authenticated_client(self.staff)
         create_response = client.post(
@@ -302,6 +340,32 @@ class CirculationApiTests(LibraryAPITestCase):
         order.refresh_from_db()
         self.assertEqual(cancel_response.status_code, 200)
         self.assertEqual(order.status, OrderStatus.CANCELLED)
+
+    def test_staff_can_create_order_for_book_outside_catalog_selection(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("order-list"),
+            {
+                "requested_book_title": "Projekt Hail Mary",
+                "requested_book_ean": "9788381883455",
+                "requested_book_publish_year": 2021,
+                "requested_book_publisher": "Akurat",
+                "requested_book_authors": "Andy Weir",
+                "requested_book_description": "Fantastyka naukowa o misji ratunkowej.",
+                "quantity": 2,
+                "supplier": "Nowy Dostawca",
+                "notes": "Zakup na prosbe czytelnikow.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get(pk=response.data["id"])
+        self.assertEqual(order.book.title, "Projekt Hail Mary")
+        self.assertEqual(order.book.ean, "9788381883455")
+        self.assertEqual(order.book.publish_year, 2021)
+        self.assertEqual(order.book.publisher.name, "Akurat")
+        self.assertEqual(order.book.authors.count(), 1)
+        self.assertEqual(order.book.authors.first().last_name, "Weir")
 
     def test_staff_can_settle_fines(self):
         fine = Fine.objects.create(

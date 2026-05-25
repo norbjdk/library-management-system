@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { Notification, NotificationType } from '../../../../core/models/notification';
 import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
@@ -7,7 +8,7 @@ import { Pagination } from '../../../../shared/components/pagination/pagination'
 
 @Component({
   selector: 'app-notifications-list',
-  imports: [Modal, Pagination],
+  imports: [DatePipe, Modal, Pagination],
   templateUrl: './notifications-list.html',
   styleUrl: './notifications-list.css',
 })
@@ -18,6 +19,8 @@ export class NotificationsList implements OnInit {
   notifications = signal<Notification[]>([]);
   loading = signal(false);
   markAllModalOpen = signal(false);
+  deleteModalOpen = signal(false);
+  notificationToDelete = signal<Notification | null>(null);
   error = signal<string | null>(null);
   count = signal(0);
   currentPage = signal(1);
@@ -81,6 +84,13 @@ export class NotificationsList implements OnInit {
     });
   }
 
+  deleteNotification(id: number) {
+    this.api.deleteNotification(id).subscribe({
+      next: () => this.loadNotifications(),
+      error: () => this.error.set('Nie udało się usunąć powiadomienia.'),
+    });
+  }
+
   requestMarkAllRead() {
     this.markAllModalOpen.set(true);
   }
@@ -92,6 +102,34 @@ export class NotificationsList implements OnInit {
   confirmMarkAllRead() {
     this.closeMarkAllModal();
     this.markAllRead();
+  }
+
+  requestDeleteNotification(notification: Notification) {
+    this.notificationToDelete.set(notification);
+    this.deleteModalOpen.set(true);
+  }
+
+  closeDeleteModal() {
+    this.deleteModalOpen.set(false);
+    this.notificationToDelete.set(null);
+  }
+
+  confirmDeleteNotification() {
+    const notification = this.notificationToDelete();
+    this.closeDeleteModal();
+
+    if (notification) {
+      this.deleteNotification(notification.id);
+    }
+  }
+
+  getDeleteModalDescription(): string {
+    const notification = this.notificationToDelete();
+    if (!notification) {
+      return 'Powiadomienie zostanie trwale usunięte z Twojej listy.';
+    }
+
+    return `Powiadomienie „${notification.title}” zostanie trwale usunięte z Twojej listy.`;
   }
 
   getTypeLabel(type: Notification['notification_type']): string {

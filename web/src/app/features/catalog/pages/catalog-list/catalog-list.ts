@@ -168,7 +168,7 @@ export class CatalogList implements OnInit {
   }
 
   getAvailableCopies(book: Book): number {
-    return book.available_copies;
+    return Math.max(book.available_copies - book.active_reservations, 0);
   }
 
   getTotalCopies(book: Book): number {
@@ -180,7 +180,7 @@ export class CatalogList implements OnInit {
   }
 
   getStatusLabel(book: Book): string {
-    return this.getAvailableCopies(book) > 0 ? 'Dostępna' : 'Niedostępna';
+    return this.getAvailableCopies(book) > 0 ? 'Dostępna' : 'Zajęta';
   }
 
   getStatusClasses(book: Book): string {

@@ -205,6 +205,64 @@ describe('BookDetail', () => {
     expect(fixture.nativeElement.textContent).toContain('Rezerwacja już istnieje.');
   });
 
+  it('marks a physically available copy as busy when it is reserved for the queue', () => {
+    api.getBook.and.returnValue(
+      of({
+        id: 1,
+        title: 'Solaris',
+        ean: '9788308061492',
+        description: 'Opis',
+        publish_year: 1961,
+        publisher: 1,
+        publisher_name: 'WL',
+        authors: [{ id: 1, first_name: 'Stanisław', last_name: 'Lem' }],
+        categories: [{ id: 1, name: 'Science fiction' }],
+        copies_count: 1,
+        available_copies: 1,
+        active_loans: 0,
+        active_reservations: 1,
+        estimated_wait_days: 7,
+      }),
+    );
+    api.getBookAvailability.and.returnValue(
+      of({
+        book_id: 1,
+        title: 'Solaris',
+        total_copies: 1,
+        available_copies: 1,
+        active_loans: 0,
+        active_reservations: 1,
+        estimated_wait_days: 7,
+        estimated_ready_date: '2099-01-01',
+      }),
+    );
+    api.getCopies.and.returnValue(
+      of({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: 11,
+            book: 1,
+            book_title: 'Solaris',
+            condition: 'good',
+            available: true,
+            location: 1,
+            location_label: 'A1 / Sci-Fi / floor 1',
+          },
+        ],
+      }),
+    );
+
+    fixture = TestBed.createComponent(BookDetail);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.hasAvailableCopies()).toBeFalse();
+    expect(component.getCopyStatus(component.copies()[0])).toBe('Zajęty');
+  });
+
   it('shows an error when the live book details cannot be loaded', () => {
     api.getBook.and.returnValue(throwError(() => new Error('load failed')));
     api.getBookAvailability.and.returnValue(

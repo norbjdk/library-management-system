@@ -1,6 +1,7 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Book } from '../../../../core/models/book';
+import { Book, Publisher } from '../../../../core/models/book';
 import { Order } from '../../../../core/models/order';
 import { DEFAULT_PAGE_SIZE } from '../../../../core/models/pagination';
 import { ApiService } from '../../../../core/services/api.service';
@@ -16,7 +17,7 @@ import {
 
 @Component({
   selector: 'app-order-list',
-  imports: [FormsModule, Modal, Pagination],
+  imports: [DatePipe, FormsModule, Modal, Pagination],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
 })
@@ -25,7 +26,9 @@ export class OrderList implements OnInit {
 
   activeFilter: Order['status'] | 'all' = 'all';
   orders = signal<Order[]>([]);
-  books = signal<Book[]>([]);
+  bookSuggestions = signal<Book[]>([]);
+  supplierSuggestions = signal<Publisher[]>([]);
+  selectedBook = signal<Book | null>(null);
   loading = signal(false);
   creating = signal(false);
   showCreateForm = signal(false);
@@ -35,13 +38,16 @@ export class OrderList implements OnInit {
   error = signal<string | null>(null);
   count = signal(0);
   currentPage = signal(1);
-  bookPage = signal(1);
-  bookCount = signal(0);
   private pendingAction: (() => void) | null = null;
-  bookSearch = '';
+  private lastBookQuery = '';
 
   orderForm = {
-    bookId: '',
+    bookTitle: '',
+    bookEan: '',
+    bookAuthors: '',
+    bookPublisher: '',
+    bookPublishYear: '',
+    bookDescription: '',
     quantity: 1,
     supplier: '',
     expected_delivery_date: '',
@@ -61,28 +67,7 @@ export class OrderList implements OnInit {
 
   ngOnInit() {
     this.loadOrders();
-    this.loadBooks();
-  }
-
-  loadBooks(page = this.bookPage()) {
-    const params: Record<string, string> = { page: String(page) };
-    const searchQuery = normalizeText(this.bookSearch);
-    this.bookSearch = searchQuery;
-
-    if (searchQuery) {
-      params['q'] = searchQuery;
-    }
-
-    this.api.getBooks(params).subscribe({
-      next: (response) => {
-        this.books.set(response.results);
-        this.bookCount.set(response.count);
-        this.bookPage.set(page);
-      },
-      error: () => {
-        this.error.set('Nie udało się pobrać listy książek do formularza zamówienia.');
-      },
-    });
+    this.loadSupplierSuggestions();
   }
 
   loadOrders(page = this.currentPage()) {
@@ -117,43 +102,105 @@ export class OrderList implements OnInit {
     this.loadOrders(page);
   }
 
-  searchBooks() {
-    this.bookPage.set(1);
-    this.loadBooks(1);
+  loadSupplierSuggestions() {
+    this.api.getPublishers({ page: '1' }).subscribe({
+      next: (response) => {
+        this.supplierSuggestions.set(response.results);
+      },
+      error: () => {
+        this.supplierSuggestions.set([]);
+      },
+    });
   }
 
-  setBookPage(page: number) {
-    this.bookPage.set(page);
-    this.loadBooks(page);
+  onBookTitleInput(value: string) {
+    const query = normalizeText(value);
+    this.lastBookQuery = query;
+    const matchedBook = this.findBookByTitle(query, this.bookSuggestions());
+    this.selectedBook.set(matchedBook);
+
+    if (matchedBook) {
+      this.populateBookMetadata(matchedBook);
+    }
+
+    if (query.length < 2) {
+      this.bookSuggestions.set([]);
+      return;
+    }
+
+    this.api.getBooks({ q: query, page: '1' }).subscribe({
+      next: (response) => {
+        if (this.lastBookQuery !== query) {
+          return;
+        }
+
+        this.bookSuggestions.set(response.results);
+        const nextMatchedBook = this.findBookByTitle(query, response.results);
+        this.selectedBook.set(nextMatchedBook);
+        if (nextMatchedBook) {
+          this.populateBookMetadata(nextMatchedBook);
+        }
+      },
+      error: () => {
+        if (this.lastBookQuery === query) {
+          this.bookSuggestions.set([]);
+          this.selectedBook.set(null);
+        }
+      },
+    });
   }
 
   toggleCreateForm() {
-    this.showCreateForm.update((open) => !open);
+    const nextOpen = !this.showCreateForm();
+    this.showCreateForm.set(nextOpen);
     this.error.set(null);
+
+    if (!nextOpen) {
+      this.resetOrderForm();
+    }
   }
 
   createOrder() {
-    const bookId = normalizeText(this.orderForm.bookId);
+    const bookTitle = normalizeText(this.orderForm.bookTitle);
+    const bookEan = normalizeText(this.orderForm.bookEan);
+    const bookAuthors = normalizeText(this.orderForm.bookAuthors);
+    const bookPublisher = normalizeText(this.orderForm.bookPublisher);
+    const bookPublishYear = normalizeText(this.orderForm.bookPublishYear);
+    const bookDescription = normalizeText(this.orderForm.bookDescription);
     const quantity = Number(this.orderForm.quantity);
     const supplier = normalizeText(this.orderForm.supplier);
     const expected_delivery_date = normalizeDateInput(this.orderForm.expected_delivery_date);
     const notes = normalizeText(this.orderForm.notes);
+    const parsedPublishYear = hasText(bookPublishYear) ? Number(bookPublishYear) : null;
 
     this.orderForm = {
-      bookId,
+      bookTitle,
+      bookEan,
+      bookAuthors,
+      bookPublisher,
+      bookPublishYear,
+      bookDescription,
       quantity: Number.isFinite(quantity) ? quantity : this.orderForm.quantity,
       supplier,
       expected_delivery_date,
       notes,
     };
 
-    if (!hasText(bookId)) {
-      this.error.set('Wybierz książkę do zamówienia.');
+    if (!hasText(bookTitle)) {
+      this.error.set('Podaj nazwę książki do zamówienia.');
       return;
     }
 
     if (!isPositiveInteger(quantity)) {
       this.error.set('Ilość zamówienia musi być dodatnią liczbą całkowitą.');
+      return;
+    }
+
+    if (
+      hasText(bookPublishYear) &&
+      (!Number.isInteger(parsedPublishYear) || Number(parsedPublishYear) <= 0)
+    ) {
+      this.error.set('Rok wydania musi być dodatnią liczbą całkowitą.');
       return;
     }
 
@@ -165,23 +212,22 @@ export class OrderList implements OnInit {
     this.creating.set(true);
     this.error.set(null);
 
-    const payload: Partial<Order> & { book: number } = {
-      book: Number(bookId),
+    const payload: Partial<Order> = {
       quantity,
       supplier,
       notes,
       expected_delivery_date: expected_delivery_date || null,
+      requested_book_title: bookTitle,
+      requested_book_ean: bookEan || undefined,
+      requested_book_authors: bookAuthors || undefined,
+      requested_book_publisher: bookPublisher || undefined,
+      requested_book_publish_year: parsedPublishYear,
+      requested_book_description: bookDescription || undefined,
     };
 
     this.api.createOrder(payload).subscribe({
       next: () => {
-        this.orderForm = {
-          bookId: '',
-          quantity: 1,
-          supplier: '',
-          expected_delivery_date: '',
-          notes: '',
-        };
+        this.resetOrderForm();
         this.creating.set(false);
         this.showCreateForm.set(false);
         this.currentPage.set(1);
@@ -189,7 +235,10 @@ export class OrderList implements OnInit {
       },
       error: (err) => {
         this.error.set(
-          err?.error?.detail ?? err?.error?.quantity?.[0] ?? 'Nie udało się utworzyć zamówienia.',
+          err?.error?.detail ??
+            err?.error?.quantity?.[0] ??
+            err?.error?.requested_book_title?.[0] ??
+            'Nie udało się utworzyć zamówienia.',
         );
         this.creating.set(false);
       },
@@ -287,5 +336,53 @@ export class OrderList implements OnInit {
       cancelled: 'Anulowane',
     };
     return labels[status];
+  }
+
+  private resetOrderForm() {
+    this.orderForm = {
+      bookTitle: '',
+      bookEan: '',
+      bookAuthors: '',
+      bookPublisher: '',
+      bookPublishYear: '',
+      bookDescription: '',
+      quantity: 1,
+      supplier: '',
+      expected_delivery_date: '',
+      notes: '',
+    };
+    this.bookSuggestions.set([]);
+    this.selectedBook.set(null);
+    this.lastBookQuery = '';
+  }
+
+  private findBookByTitle(title: string, books: Book[]): Book | null {
+    const normalizedTitle = this.normalizeBookTitle(title);
+    const exactMatch = books.find(
+      (book) => this.normalizeBookTitle(book.title) === normalizedTitle,
+    );
+
+    return exactMatch ?? (books.length === 1 ? books[0] : null);
+  }
+
+  private normalizeBookTitle(title: string): string {
+    return normalizeText(title).toLocaleLowerCase();
+  }
+
+  private populateBookMetadata(book: Book) {
+    this.orderForm = {
+      ...this.orderForm,
+      bookEan: book.ean ?? this.orderForm.bookEan,
+      bookAuthors: this.getAuthorNames(book) || this.orderForm.bookAuthors,
+      bookPublisher: book.publisher_name ?? this.orderForm.bookPublisher,
+      bookPublishYear: book.publish_year
+        ? String(book.publish_year)
+        : this.orderForm.bookPublishYear,
+      bookDescription: book.description ?? this.orderForm.bookDescription,
+    };
+  }
+
+  private getAuthorNames(book: Book): string {
+    return book.authors.map((author) => `${author.first_name} ${author.last_name}`).join(', ');
   }
 }

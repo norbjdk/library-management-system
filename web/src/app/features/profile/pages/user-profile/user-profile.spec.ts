@@ -84,7 +84,17 @@ describe('UserProfileComponent', () => {
 
   it('sanitizes profile payload and displays success after saving', () => {
     api.getProfile.and.returnValue(of(profile));
-    api.updateProfile.and.returnValue(of(profile));
+    api.updateProfile.and.returnValue(
+      of({
+        ...profile,
+        first_name: 'Anna Maria',
+        full_name: 'Anna Maria Czytelnik',
+        summary: {
+          ...profile.summary,
+          notification_count: 5,
+        },
+      }),
+    );
     createComponent();
     component.form = {
       first_name: '  Anna   Maria ',
@@ -102,7 +112,13 @@ describe('UserProfileComponent', () => {
       email: 'anna@example.com',
       birthdate: '1998-03-12',
     });
-    expect(auth.updateCurrentUser).toHaveBeenCalled();
+    expect(component.profile()?.summary.notification_count).toBe(5);
+    expect(auth.updateCurrentUser).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        first_name: 'Anna Maria',
+        summary: jasmine.objectContaining({ notification_count: 5 }),
+      }),
+    );
     expect(fixture.nativeElement.textContent).toContain('Profil został zapisany.');
   });
 

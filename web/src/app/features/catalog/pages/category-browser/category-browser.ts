@@ -140,7 +140,7 @@ export class CategoryBrowser implements OnInit {
       return 'Masz rezerwację';
     }
 
-    return book.available_copies > 0 ? 'Zarezerwuj' : 'Kolejka';
+    return this.getBorrowableCopies(book) > 0 ? 'Zarezerwuj' : 'Kolejka';
   }
 
   isReservationDisabled(book: Book): boolean {
@@ -180,7 +180,7 @@ export class CategoryBrowser implements OnInit {
       return 'Kontynuuj';
     }
 
-    return book.available_copies > 0 ? 'Zarezerwuj odbiór' : 'Dołącz do kolejki';
+    return this.getBorrowableCopies(book) > 0 ? 'Zarezerwuj odbiór' : 'Dołącz do kolejki';
   }
 
   getReservationModalDescription(): string {
@@ -189,7 +189,7 @@ export class CategoryBrowser implements OnInit {
       return 'Przejdziesz do szczegółów książki, gdzie dokończysz rezerwację.';
     }
 
-    if (book.available_copies > 0) {
+    if (this.getBorrowableCopies(book) > 0) {
       return 'Najpierw przejdziemy do szczegółów książki, a potem zapiszesz egzemplarz do odbioru.';
     }
 
@@ -201,11 +201,16 @@ export class CategoryBrowser implements OnInit {
   }
 
   getAvailabilityLabel(book: Book): string {
-    if (book.available_copies > 0) {
-      return `${book.available_copies} z ${book.copies_count} egz. dostępne`;
+    const borrowableCopies = this.getBorrowableCopies(book);
+    if (borrowableCopies > 0) {
+      return `${borrowableCopies} z ${book.copies_count} egz. dostępne`;
     }
 
     return 'Brak wolnych egzemplarzy';
+  }
+
+  getBorrowableCopies(book: Book): number {
+    return Math.max(book.available_copies - book.active_reservations, 0);
   }
 
   getLoginQueryParams(bookId: number): { redirectTo: string } {

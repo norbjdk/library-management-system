@@ -198,6 +198,17 @@ class Book(models.Model):
         ).count()
 
     @property
+    def reserved_for_pending_reservations_count(self) -> int:
+        return min(self.active_reservations_count, self.available_copies_count)
+
+    @property
+    def borrowable_copies_count(self) -> int:
+        return max(
+            self.available_copies_count - self.reserved_for_pending_reservations_count,
+            0,
+        )
+
+    @property
     def active_loans_count(self) -> int:
         return Loan.objects.filter(
             copy__book=self,
@@ -221,6 +232,37 @@ class Book(models.Model):
             .order_by("id")
             .first()
         )
+
+    def next_borrowable_copy(self) -> Copy | None:
+        reserved_count = self.reserved_for_pending_reservations_count
+        return (
+            self.copies.filter(
+                available=True,
+                condition__in=LOANABLE_BOOK_CONDITIONS,
+            )
+            .order_by("id")[reserved_count : reserved_count + 1]
+            .first()
+        )
+
+    def reserved_copy_ids(self) -> list[int]:
+        reserved_count = self.reserved_for_pending_reservations_count
+        if reserved_count == 0:
+            return []
+
+        return list(
+            self.copies.filter(
+                available=True,
+                condition__in=LOANABLE_BOOK_CONDITIONS,
+            )
+            .order_by("id")
+            .values_list("id", flat=True)[:reserved_count]
+        )
+
+    def is_copy_reserved_for_pending_reservations(self, copy: Copy) -> bool:
+        if copy.book_id != self.id or not copy.is_loanable:
+            return False
+
+        return copy.id in set(self.reserved_copy_ids())
 
     def estimated_wait_days(
         self, queue_step_days: int = RESERVATION_QUEUE_STEP_DAYS

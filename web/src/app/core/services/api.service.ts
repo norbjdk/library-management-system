@@ -184,6 +184,10 @@ export class ApiService {
     return this.http.post<{ updated: number }>(`${this.base}/notifications/mark_all_read/`, {});
   }
 
+  deleteNotification(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/notifications/${id}/`);
+  }
+
   getOrders(params?: Record<string, string>): Observable<PaginatedResponse<Order>> {
     return this.http
       .get<PaginatedResponse<Order> | Order[]>(`${this.base}/orders/`, {

@@ -24,12 +24,11 @@
         <p class="text-sm font-medium mt-1">Przeglądaj katalog i kategorie bez logowania.</p>
         <p class="text-xs text-slate-400 mt-1">Załóż konto, aby rezerwować książki i zarządzać wypożyczeniami.</p>
         <div class="mt-4 flex gap-2">
-            <a routerLink="/login"
-                class="flex-1 rounded-full bg-white text-slate-900 text-center px-3 py-2 text-sm font-medium">
+            <a routerLink="/login" class="secondary-button flex-1 !rounded-full !px-3 !py-2 !text-sm">
                 Logowanie
             </a>
             <a routerLink="/login" [queryParams]="{ mode: 'register' }"
-                class="flex-1 rounded-full border border-slate-500 text-center px-3 py-2 text-sm font-medium text-white">
+                class="accent-button flex-1 !rounded-full !px-3 !py-2 !text-sm">
                 Rejestracja
             </a>
         </div>

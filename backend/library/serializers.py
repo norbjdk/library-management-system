@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -361,8 +362,40 @@ class FineSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     book_title = serializers.CharField(source="book.title", read_only=True)
+    book_ean = serializers.CharField(source="book.ean", read_only=True)
+    book_publish_year = serializers.IntegerField(
+        source="book.publish_year", read_only=True
+    )
+    book_publisher_name = serializers.CharField(
+        source="book.publisher.name", read_only=True
+    )
+    book_author_names = serializers.SerializerMethodField()
     requested_by_name = serializers.SerializerMethodField()
     age_days = serializers.SerializerMethodField()
+    requested_book_title = serializers.CharField(write_only=True, required=False)
+    requested_book_ean = serializers.CharField(
+        write_only=True, required=False, allow_blank=True
+    )
+    requested_book_publish_year = serializers.IntegerField(
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    requested_book_publisher = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
+    requested_book_authors = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
+    requested_book_description = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
 
     class Meta:
         model = Order
@@ -370,6 +403,10 @@ class OrderSerializer(serializers.ModelSerializer):
             "id",
             "book",
             "book_title",
+            "book_ean",
+            "book_publish_year",
+            "book_publisher_name",
+            "book_author_names",
             "requested_by",
             "requested_by_name",
             "quantity",
@@ -379,13 +416,185 @@ class OrderSerializer(serializers.ModelSerializer):
             "expected_delivery_date",
             "notes",
             "age_days",
+            "requested_book_title",
+            "requested_book_ean",
+            "requested_book_publish_year",
+            "requested_book_publisher",
+            "requested_book_authors",
+            "requested_book_description",
         ]
+        extra_kwargs = {
+            "book": {"required": False},
+        }
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        requested_title = self._normalize_text(attrs.get("requested_book_title", ""))
+        if attrs.get("book") is None and not requested_title:
+            raise serializers.ValidationError(
+                {"requested_book_title": ["Podaj tytul ksiazki do zamowienia."]}
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        requested_title = self._normalize_text(
+            validated_data.pop("requested_book_title", "")
+        )
+        requested_ean = self._normalize_text(
+            validated_data.pop("requested_book_ean", "")
+        )
+        requested_publish_year = validated_data.pop("requested_book_publish_year", None)
+        requested_publisher_name = self._normalize_text(
+            validated_data.pop("requested_book_publisher", "")
+        )
+        requested_authors = self._normalize_text(
+            validated_data.pop("requested_book_authors", "")
+        )
+        requested_description = self._normalize_text(
+            validated_data.pop("requested_book_description", "")
+        )
+
+        book = validated_data.get("book")
+        publisher = self._resolve_publisher(requested_publisher_name)
+
+        if book is None:
+            book = self._resolve_book(
+                title=requested_title,
+                ean=requested_ean,
+                publish_year=requested_publish_year,
+                publisher=publisher,
+                description=requested_description,
+            )
+            validated_data["book"] = book
+        else:
+            book = self._hydrate_book(
+                book=book,
+                ean=requested_ean,
+                publish_year=requested_publish_year,
+                publisher=publisher,
+                description=requested_description,
+            )
+
+        self._attach_authors(book, requested_authors)
+        return super().create(validated_data)
+
+    def get_book_author_names(self, obj):
+        return ", ".join(
+            f"{author.first_name} {author.last_name}".strip()
+            for author in obj.book.authors.all()
+        )
 
     def get_requested_by_name(self, obj):
         return obj.requested_by.full_name if obj.requested_by_id else None
 
     def get_age_days(self, obj):
         return (timezone.localdate() - obj.requested_at.date()).days
+
+    def _resolve_book(
+        self,
+        *,
+        title: str,
+        ean: str,
+        publish_year: int | None,
+        publisher: Publisher | None,
+        description: str,
+    ) -> Book:
+        book = None
+
+        if ean:
+            book = Book.objects.filter(ean=ean).first()
+
+        if book is None and title and not ean:
+            book = Book.objects.filter(title__iexact=title).first()
+
+        if book is None:
+            return Book.objects.create(
+                title=title,
+                ean=ean or None,
+                publish_year=publish_year,
+                publisher=publisher,
+                description=description or None,
+            )
+
+        return self._hydrate_book(
+            book=book,
+            ean=ean,
+            publish_year=publish_year,
+            publisher=publisher,
+            description=description,
+        )
+
+    def _hydrate_book(
+        self,
+        *,
+        book: Book,
+        ean: str,
+        publish_year: int | None,
+        publisher: Publisher | None,
+        description: str,
+    ) -> Book:
+        update_fields = []
+
+        if ean and not book.ean:
+            book.ean = ean
+            update_fields.append("ean")
+        if publish_year is not None and book.publish_year is None:
+            book.publish_year = publish_year
+            update_fields.append("publish_year")
+        if publisher is not None and book.publisher_id is None:
+            book.publisher = publisher
+            update_fields.append("publisher")
+        if description and not book.description:
+            book.description = description
+            update_fields.append("description")
+
+        if update_fields:
+            book.save(update_fields=update_fields)
+
+        return book
+
+    def _resolve_publisher(self, name: str) -> Publisher | None:
+        if not name:
+            return None
+
+        publisher, _ = Publisher.objects.get_or_create(name=name)
+        return publisher
+
+    def _attach_authors(self, book: Book, authors_text: str) -> None:
+        if not authors_text or book.authors.exists():
+            return
+
+        author_names = [
+            self._normalize_text(fragment)
+            for fragment in re.split(r"[;,]", authors_text)
+        ]
+        author_names = [fragment for fragment in author_names if fragment]
+        if not author_names:
+            return
+
+        authors = []
+        for full_name in author_names:
+            first_name, last_name = self._split_author_name(full_name)
+            author, _ = Author.objects.get_or_create(
+                first_name=first_name,
+                last_name=last_name,
+            )
+            authors.append(author)
+
+        if authors:
+            book.set_authors(authors)
+
+    def _split_author_name(self, full_name: str) -> tuple[str, str]:
+        parts = full_name.split()
+        if len(parts) == 1:
+            return parts[0], parts[0]
+
+        return " ".join(parts[:-1]), parts[-1]
+
+    def _normalize_text(self, value: str | None) -> str:
+        return " ".join((value or "").split())
 
 
 class NotificationSerializer(serializers.ModelSerializer):

@@ -12,6 +12,7 @@ export class Modal {
   title = input('');
   description = input('');
   dismissible = input(true);
+  showCloseButton = input(false);
   closeLabel = input('Zamknij');
   closed = output<void>();
 

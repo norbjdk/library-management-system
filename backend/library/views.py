@@ -24,6 +24,7 @@ from library.models import (
     Order,
     Publisher,
     Reservation,
+    ReservationStatus,
 )
 from library.permissions import IsStaffMember, IsStaffWriteOrReadOnly
 from library.serializers import (
@@ -55,6 +56,53 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+
+def is_staff_actor(user) -> bool:
+    return bool(
+        getattr(user, "is_staff", False) or getattr(user, "is_staff_member", False)
+    )
+
+
+def is_authenticated_actor(user) -> bool:
+    return bool(
+        getattr(user, "is_authenticated", False) or isinstance(user, LibraryUser)
+    )
+
+
+def filter_visible_user_queryset(queryset, user):
+    if not is_authenticated_actor(user):
+        return queryset.none()
+    if is_staff_actor(user):
+        return queryset
+    return queryset.filter(user_id=user.id)
+
+
+def build_profile_summary(user) -> dict[str, object]:
+    if not is_authenticated_actor(user):
+        return {
+            "loan_count": 0,
+            "reservation_count": 0,
+            "fine_total": Decimal("0.00"),
+            "notification_count": 0,
+        }
+
+    loans = filter_visible_user_queryset(Loan.objects.all(), user)
+    reservations = filter_visible_user_queryset(Reservation.objects.all(), user)
+    fines = filter_visible_user_queryset(Fine.objects.all(), user)
+    notifications = filter_visible_user_queryset(Notification.objects.all(), user)
+
+    return {
+        "loan_count": loans.filter(
+            status__in=[LoanStatus.ACTIVE, LoanStatus.OVERDUE],
+            return_date__isnull=True,
+        ).count(),
+        "reservation_count": reservations.filter(
+            status=ReservationStatus.PENDING,
+        ).count(),
+        "fine_total": fines.aggregate(total=Sum("amount"))["total"] or Decimal("0.00"),
+        "notification_count": notifications.count(),
+    }
 
 
 class ApiRootView(APIView):
@@ -369,10 +417,14 @@ class LoanViewSet(viewsets.ModelViewSet):
 
         due_date = request.data.get("due_date") or build_default_due_date()
         book = get_object_or_404(Book, pk=book_id)
-        available_copy = book.next_available_copy()
+        available_copy = book.next_borrowable_copy()
         if available_copy is None:
             raise ValidationError(
-                {"book": "Ta książka nie ma teraz dostępnych egzemplarzy."}
+                {
+                    "book": (
+                        "Ta książka nie ma teraz dostępnych egzemplarzy do nowego wypożyczenia."
+                    )
+                }
             )
 
         loan = Loan.objects.create(
@@ -630,7 +682,16 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsStaffMember]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["book__title", "supplier", "status", "notes"]
+    search_fields = [
+        "book__title",
+        "book__ean",
+        "book__publisher__name",
+        "book__authors__first_name",
+        "book__authors__last_name",
+        "supplier",
+        "status",
+        "notes",
+    ]
     ordering_fields = ["requested_at", "expected_delivery_date", "status", "id"]
 
     def get_queryset(self):
@@ -687,10 +748,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         user = getattr(self.request, "user", None)
+        queryset = filter_visible_user_queryset(queryset, user)
         if not getattr(user, "is_authenticated", False):
-            return queryset.none()
-        if not getattr(user, "is_staff", False):
-            queryset = queryset.filter(user_id=user.id)
+            return queryset
 
         unread = self.request.query_params.get("unread")
         notification_type = self.request.query_params.get("type")
@@ -720,10 +780,10 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = getattr(self.request, "user", None)
-        if not getattr(user, "is_staff", False):
-            raise PermissionDenied(
-                "Tylko pracownicy biblioteki mogą usuwać powiadomienia."
-            )
+        if not getattr(user, "is_authenticated", False):
+            raise PermissionDenied("Wymagana autentykacja.")
+        if not getattr(user, "is_staff", False) and instance.user_id != user.id:
+            raise PermissionDenied("Mozesz usuwac tylko swoje powiadomienia.")
         instance.delete()
 
     @action(detail=True, methods=["post"])
@@ -758,25 +818,26 @@ class CurrentUserView(APIView):
             raise PermissionDenied("Wymagana autentykacja.")
         return get_object_or_404(LibraryUser, pk=user.id)
 
-    def get(self, request):
-        profile = self.get_user_model_instance(request)
+    def build_profile_payload(self, profile):
         serializer = ReaderProfileSerializer(profile)
         payload = serializer.data
-        payload["summary"] = {
-            "loan_count": profile.loans.count(),
-            "reservation_count": profile.reservations.count(),
-            "fine_total": profile.fines.aggregate(total=Sum("amount"))["total"]
-            or Decimal("0.00"),
-            "notification_count": profile.notifications.count(),
-        }
-        return Response(payload)
+        summary = build_profile_summary(profile)
+        payload["loan_count"] = summary["loan_count"]
+        payload["reservation_count"] = summary["reservation_count"]
+        payload["fine_total"] = summary["fine_total"]
+        payload["summary"] = summary
+        return payload
+
+    def get(self, request):
+        profile = self.get_user_model_instance(request)
+        return Response(self.build_profile_payload(profile))
 
     def patch(self, request):
         profile = self.get_user_model_instance(request)
         serializer = ReaderProfileSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(self.build_profile_payload(profile))
 
     def put(self, request):
         return self.patch(request)

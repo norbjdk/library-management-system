@@ -81,12 +81,19 @@
                                         Anuluj
                                     </button>
                                     }
-                                    @if (isStaff() && reservation.status === 'pending') {
+                                    @if (isStaff() && canIssueReservation(reservation)) {
                                     <button type="button"
                                         class="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
                                         (click)="requestIssueReservation(reservation.id)">
                                         Wydaj na 7 dni
                                     </button>
+                                    }
+                                    @if (isStaff() && reservation.status === 'pending' &&
+                                    !canIssueReservation(reservation)) {
+                                    <span
+                                        class="inline-flex items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+                                        Oczekuje na egzemplarz
+                                    </span>
                                     }
                                 </div>
                             </td>

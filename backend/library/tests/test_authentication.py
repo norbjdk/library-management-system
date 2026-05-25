@@ -1,9 +1,23 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.urls import reverse
-from library.models import Fine, LibraryRole, LibraryUser
+from library.models import (
+    Book,
+    BookCondition,
+    Copy,
+    Fine,
+    LibraryRole,
+    LibraryUser,
+    Loan,
+    LoanStatus,
+    Notification,
+    NotificationType,
+    Reservation,
+    ReservationStatus,
+)
 
 from .base import LibraryAPITestCase
 
@@ -153,6 +167,72 @@ class AuthenticationApiTests(LibraryAPITestCase):
         response = self.authenticated_client(self.reader).get(reverse("profile"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["summary"]["loan_count"], 1)
+        self.assertEqual(response.data["summary"]["reservation_count"], 1)
+        self.assertEqual(response.data["summary"]["notification_count"], 1)
+        self.assertEqual(
+            Decimal(str(response.data["summary"]["fine_total"])), Decimal("12.50")
+        )
+
+    def test_staff_profile_summary_uses_visible_system_counts(self):
+        Fine.objects.create(
+            loan=self.loan,
+            user=self.reader,
+            amount=Decimal("12.50"),
+        )
+        returned_copy = Copy.objects.create(
+            book=self.book,
+            location=self.location,
+            condition=BookCondition.GOOD,
+            available=True,
+        )
+        Loan.objects.create(
+            copy=returned_copy,
+            user=self.staff,
+            loan_date=self.today - timedelta(days=14),
+            due_date=self.today - timedelta(days=7),
+            return_date=self.today - timedelta(days=1),
+            status=LoanStatus.RETURNED,
+        )
+        Reservation.objects.create(
+            book=Book.objects.create(title="Archiwum burz", ean="222-22-2222-222-2"),
+            user=self.staff,
+            reservation_date=self.today - timedelta(days=5),
+            expiry_date=self.today + timedelta(days=2),
+            status=ReservationStatus.CANCELLED,
+        )
+        Notification.objects.create(
+            user=self.other_reader,
+            notification_type=NotificationType.ORDER_UPDATE,
+            title="Nowa dostawa",
+            message="Do systemu trafiło kolejne powiadomienie.",
+        )
+
+        response = self.authenticated_client(self.staff).get(reverse("profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["summary"]["loan_count"], 1)
+        self.assertEqual(response.data["summary"]["reservation_count"], 2)
+        self.assertEqual(response.data["summary"]["notification_count"], 2)
+        self.assertEqual(
+            Decimal(str(response.data["summary"]["fine_total"])), Decimal("12.50")
+        )
+
+    def test_profile_update_returns_fresh_summary(self):
+        Fine.objects.create(
+            loan=self.loan,
+            user=self.reader,
+            amount=Decimal("12.50"),
+        )
+
+        response = self.authenticated_client(self.reader).patch(
+            reverse("profile"),
+            {"first_name": "  Anna Maria  "},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["first_name"], "Anna Maria")
         self.assertEqual(response.data["summary"]["loan_count"], 1)
         self.assertEqual(response.data["summary"]["reservation_count"], 1)
         self.assertEqual(response.data["summary"]["notification_count"], 1)

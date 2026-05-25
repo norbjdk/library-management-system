@@ -19,32 +19,64 @@
 
         <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
             <div class="xl:col-span-2">
-                <label class="block text-sm font-medium text-slate-700 mb-1.5">Książka</label>
-                <div class="mb-3 flex flex-col gap-2 sm:flex-row">
-                    <input type="text" [(ngModel)]="bookSearch" (keyup.enter)="searchBooks()"
-                        placeholder="Szukaj książki po tytule lub autorze"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
-                    <button type="button" class="secondary-button sm:shrink-0" (click)="searchBooks()">Szukaj</button>
-                </div>
-                <select [(ngModel)]="orderForm.bookId"
-                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90">
-                    <option value="">Wybierz książkę</option>
-                    @for (book of books(); track book.id) {
-                    <option [value]="book.id">{{ book.title }}</option>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Nazwa książki</label>
+                <input type="text" [(ngModel)]="orderForm.bookTitle" (ngModelChange)="onBookTitleInput($event)"
+                    list="order-book-suggestions" placeholder="Wpisz tytuł książki z katalogu albo nową pozycję"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+                <datalist id="order-book-suggestions">
+                    @for (book of bookSuggestions(); track book.id) {
+                    <option [value]="book.title"></option>
                     }
-                </select>
-                <div class="mt-3">
-                    <app-pagination [page]="bookPage()" [pageSize]="pageSize" [totalItems]="bookCount()"
-                        (pageChange)="setBookPage($event)" />
+                </datalist>
+                <p class="mt-2 text-xs text-slate-500">
+                    Podpowiedzi są opcjonalne. Możesz zamówić także książkę, której nie ma jeszcze w katalogu.
+                </p>
+
+                @if (selectedBook(); as book) {
+                <div class="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <p class="font-semibold text-slate-800">Znaleziono w katalogu: {{ book.title }}</p>
+                    <p class="mt-1">Autorzy: {{ orderForm.bookAuthors || '—' }}</p>
+                    <p>Wydawca: {{ orderForm.bookPublisher || '—' }} | Rok: {{ orderForm.bookPublishYear || '—' }} |
+                        EAN: {{ orderForm.bookEan || '—' }}</p>
                 </div>
+                }
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">EAN</label>
+                <input type="text" [(ngModel)]="orderForm.bookEan" placeholder="978..."
+                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Autor / autorzy</label>
+                <input type="text" [(ngModel)]="orderForm.bookAuthors" placeholder="Np. Andy Weir"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Wydawca książki</label>
+                <input type="text" [(ngModel)]="orderForm.bookPublisher" list="order-publisher-suggestions"
+                    placeholder="Wybierz z listy lub wpisz wydawcę"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+                <datalist id="order-publisher-suggestions">
+                    @for (supplier of supplierSuggestions(); track supplier.id) {
+                    <option [value]="supplier.name"></option>
+                    }
+                </datalist>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Rok wydania</label>
+                <input type="number" min="1" [(ngModel)]="orderForm.bookPublishYear" placeholder="Np. 2024"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+            </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Ilość</label>
                 <input type="number" min="1" [(ngModel)]="orderForm.quantity"
                     class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
             </div>
-
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Oczekiwana dostawa</label>
                 <input type="date" [(ngModel)]="orderForm.expected_delivery_date"
@@ -54,15 +86,27 @@
 
         <div class="grid gap-4 md:grid-cols-2">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1.5">Dostawca</label>
-                <input type="text" [(ngModel)]="orderForm.supplier"
-                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Opis książki</label>
+                <textarea rows="3" [(ngModel)]="orderForm.bookDescription"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90"></textarea>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1.5">Notatki</label>
-                <input type="text" [(ngModel)]="orderForm.notes"
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Dostawca</label>
+                <input type="text" [(ngModel)]="orderForm.supplier" list="order-supplier-suggestions"
+                    placeholder="Wybierz z listy lub wpisz nowego dostawcę"
                     class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90" />
+                <datalist id="order-supplier-suggestions">
+                    @for (supplier of supplierSuggestions(); track supplier.id) {
+                    <option [value]="supplier.name"></option>
+                    }
+                </datalist>
             </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Notatki</label>
+            <textarea rows="3" [(ngModel)]="orderForm.notes"
+                class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white/90"></textarea>
         </div>
 
         <div class="flex flex-col sm:flex-row sm:justify-end gap-3">
@@ -119,12 +163,18 @@
                     @for (order of orders(); track order.id) {
                     <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4 text-slate-400">#{{ order.id }}</td>
-                        <td class="px-6 py-4 font-medium text-slate-800">{{ order.book_title }}</td>
+                        <td class="px-6 py-4">
+                            <p class="font-medium text-slate-800">{{ order.book_title }}</p>
+                            <p class="mt-1 text-xs text-slate-500">Autor: {{ order.book_author_names || '—' }}</p>
+                            <p class="text-xs text-slate-500">Wydawca: {{ order.book_publisher_name || '—' }} | EAN: {{
+                                order.book_ean || '—' }}</p>
+                        </td>
                         <td class="px-6 py-4 text-slate-600">{{ order.quantity }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ order.supplier || '—' }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ order.requested_by_name ?? 'System' }}</td>
-                        <td class="px-6 py-4 text-slate-500">{{ order.requested_at }}</td>
-                        <td class="px-6 py-4 text-slate-500">{{ order.expected_delivery_date ?? '—' }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ order.requested_at | date: 'yyyy-MM-dd' }}</td>
+                        <td class="px-6 py-4 text-slate-500">{{ order.expected_delivery_date ?
+                            (order.expected_delivery_date | date: 'yyyy-MM-dd') : '—' }}</td>
                         <td class="px-6 py-4">
                             <span
                                 class="text-xs font-medium px-2 py-1 rounded-full {{ getStatusClasses(order.status) }}">

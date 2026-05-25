@@ -184,13 +184,7 @@ export class BookDetail implements OnInit {
   }
 
   hasAvailableCopies(): boolean {
-    const availability = this.availability();
-    if (availability) {
-      return availability.available_copies > 0;
-    }
-
-    const currentBook = this.book();
-    return (currentBook?.available_copies ?? 0) > 0;
+    return this.getEffectiveAvailableCopies() > 0;
   }
 
   isStaff(): boolean {
@@ -268,10 +262,58 @@ export class BookDetail implements OnInit {
   }
 
   getCopyStatus(copy: Copy): string {
-    return copy.available ? 'Dostępny' : 'W obiegu';
+    if (!copy.available) {
+      return 'W obiegu';
+    }
+
+    if (copy.condition === 'damaged') {
+      return 'Niedostępny';
+    }
+
+    if (this.isCopyReservedForQueue(copy)) {
+      return 'Zajęty';
+    }
+
+    return 'Dostępny';
   }
 
   getCopyStatusClasses(copy: Copy): string {
-    return copy.available ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700';
+    if (!copy.available) {
+      return 'bg-slate-200 text-slate-700';
+    }
+
+    if (copy.condition === 'damaged') {
+      return 'bg-rose-100 text-rose-700';
+    }
+
+    if (this.isCopyReservedForQueue(copy)) {
+      return 'bg-amber-100 text-amber-700';
+    }
+
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  getEffectiveAvailableCopies(): number {
+    const availability = this.availability();
+    if (availability) {
+      return Math.max(availability.available_copies - availability.active_reservations, 0);
+    }
+
+    const currentBook = this.book();
+    return Math.max(
+      (currentBook?.available_copies ?? 0) - (currentBook?.active_reservations ?? 0),
+      0,
+    );
+  }
+
+  private isCopyReservedForQueue(copy: Copy): boolean {
+    const loanableAvailableCopies = this.copies()
+      .filter((item) => item.available && item.condition !== 'damaged')
+      .sort((left, right) => left.id - right.id);
+    const activeReservations =
+      this.availability()?.active_reservations ?? this.book()?.active_reservations ?? 0;
+    const reservedCount = Math.min(activeReservations, loanableAvailableCopies.length);
+
+    return loanableAvailableCopies.slice(0, reservedCount).some((item) => item.id === copy.id);
   }
 }

@@ -26,19 +26,19 @@
     @if (profile(); as profileData) {
     <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
         <article class="metric-card">
-            <span class="muted-label">Aktywne wypożyczenia</span>
+            <span class="muted-label">{{ getLoanSummaryLabel(profileData) }}</span>
             <strong>{{ profileData.summary.loan_count }}</strong>
         </article>
         <article class="metric-card">
-            <span class="muted-label">Rezerwacje</span>
+            <span class="muted-label">{{ getReservationSummaryLabel(profileData) }}</span>
             <strong>{{ profileData.summary.reservation_count }}</strong>
         </article>
         <article class="metric-card">
-            <span class="muted-label">Powiadomienia</span>
+            <span class="muted-label">{{ getNotificationSummaryLabel(profileData) }}</span>
             <strong>{{ profileData.summary.notification_count }}</strong>
         </article>
         <article class="metric-card">
-            <span class="muted-label">Łączna kwota kar</span>
+            <span class="muted-label">{{ getFineSummaryLabel(profileData) }}</span>
             <strong>{{ profileData.summary.fine_total }} PLN</strong>
         </article>
     </div>
