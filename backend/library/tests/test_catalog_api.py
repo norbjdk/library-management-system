@@ -60,7 +60,7 @@ class CatalogApiTests(LibraryAPITestCase):
             "category_ids": [self.category.id],
         }
 
-        response = self.authenticated_client(self.staff).post(
+        response = self.authenticated_client(self.admin).post(
             reverse("book-list"), payload, format="json"
         )
 
@@ -68,6 +68,18 @@ class CatalogApiTests(LibraryAPITestCase):
         created_book = Book.objects.get(ean="222-22-2222-222-2")
         self.assertEqual(created_book.authors.count(), 1)
         self.assertEqual(created_book.categories.count(), 1)
+
+    def test_librarian_cannot_create_book(self):
+        payload = {
+            "title": "Książka bibliotekarza",
+            "publisher": self.publisher.id,
+        }
+
+        response = self.authenticated_client(self.staff).post(
+            reverse("book-list"), payload, format="json"
+        )
+
+        self.assertEqual(response.status_code, 403)
 
     def test_reader_cannot_create_book(self):
         payload = {
@@ -80,3 +92,17 @@ class CatalogApiTests(LibraryAPITestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_delete_book_without_dependencies(self):
+        removable_book = Book.objects.create(
+            title="Usuwalna książka",
+            ean="999-99-9999-999-9",
+            publisher=self.publisher,
+        )
+
+        response = self.authenticated_client(self.admin).delete(
+            reverse("book-detail", args=[removable_book.id])
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Book.objects.filter(pk=removable_book.id).exists())

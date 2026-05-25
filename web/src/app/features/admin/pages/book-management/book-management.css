@@ -2,27 +2,38 @@
   display: block;
 }
 
-.user-list-shell {
+.book-management-shell {
   gap: 1.25rem;
 }
 
-.user-list-actions {
+.book-management-actions,
+.book-management-summary,
+.filter-actions,
+.modal-actions,
+.row-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
 
-.user-list-summary {
-  display: flex;
-  flex-wrap: wrap;
+.book-management-summary {
   gap: 0.75rem;
 }
 
 .admin-filters,
-.form-grid {
+.form-grid,
+.selection-sections {
   display: grid;
   gap: 1rem;
+}
+
+.admin-filters,
+.form-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.selection-sections {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .form-field {
@@ -57,18 +68,6 @@
   grid-column: 1 / -1;
 }
 
-.filter-actions,
-.modal-actions,
-.row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.filter-actions {
-  align-items: flex-end;
-}
-
 .modal-form {
   display: flex;
   flex-direction: column;
@@ -84,7 +83,7 @@
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 920px;
 }
 
 .admin-table th,
@@ -109,8 +108,14 @@
 }
 
 .primary-cell {
-  font-weight: 600;
   color: rgb(15 23 42);
+  font-weight: 600;
+}
+
+.secondary-cell {
+  color: rgb(100 116 139);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
 }
 
 .actions-column {
@@ -119,6 +124,62 @@
 
 .row-actions {
   justify-content: flex-end;
+}
+
+.selection-card {
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.5rem;
+  padding: 1rem;
+  background: rgb(248 250 252);
+}
+
+.selection-card header {
+  margin-bottom: 0.85rem;
+}
+
+.selection-card h3 {
+  margin: 0;
+  color: rgb(15 23 42);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.selection-card p {
+  margin: 0.35rem 0 0;
+  color: rgb(100 116 139);
+  font-size: 0.88rem;
+}
+
+.selection-grid {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 15rem;
+  overflow: auto;
+}
+
+.selection-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 1rem;
+  background: white;
+  color: rgb(30 41 59);
+}
+
+.selection-item input {
+  width: auto;
+}
+
+.selection-empty,
+.empty-state,
+.confirm-copy {
+  color: rgb(100 116 139);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
 }
 
 .delete-button {
@@ -141,32 +202,26 @@
   cursor: not-allowed;
 }
 
-.empty-state {
-  text-align: center;
-  color: rgb(148 163 184);
-  padding: 3rem 1rem;
-}
-
-.confirm-copy {
-  color: rgb(51 65 85);
-}
-
-.user-list-loading {
+.book-management-loading {
   min-height: 12rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.compact-loading {
+  min-height: 6rem;
+}
+
 @media (max-width: 720px) {
-  .user-list-actions,
+  .book-management-actions,
   .filter-actions,
   .modal-actions,
   .row-actions {
     flex-direction: column;
   }
 
-  .user-list-actions > *,
+  .book-management-actions > *,
   .filter-actions > *,
   .modal-actions > *,
   .row-actions > * {

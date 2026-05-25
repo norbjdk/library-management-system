@@ -1,0 +1,219 @@
+<section class="page-shell book-management-shell">
+    <app-breadcrumb [items]="breadcrumbItems" />
+
+    <div class="page-header">
+        <div>
+            <p class="page-kicker">Administracja</p>
+            <h1>Zarządzanie książkami</h1>
+            <p class="page-subtitle">Administrator prowadzi CRUD katalogu, a bibliotekarz korzysta z panelu operacyjnego
+                bez edycji bazy książek.</p>
+        </div>
+
+        <div class="book-management-actions">
+            <button type="button" class="accent-button" (click)="openCreateModal()">Nowa książka</button>
+            <button type="button" class="secondary-button" (click)="loadReferenceData(); loadBooks()">Odśwież
+                dane</button>
+        </div>
+    </div>
+
+    <div class="book-management-summary">
+        <app-badge [label]="totalItems() + ' książek w wynikach'" tone="info" />
+        <app-badge [label]="authors().length + ' autorów w formularzu'" tone="success" />
+        <app-badge [label]="publishers().length + ' wydawców w formularzu'" tone="warning" />
+        <app-badge [label]="categories().length + ' kategorii w formularzu'" tone="info" />
+    </div>
+
+    <section class="panel-card p-6 space-y-5">
+        <form class="admin-filters" (submit)="applyFilters(); $event.preventDefault()">
+            <label class="form-field">
+                <span>Szukaj książki</span>
+                <input type="search" name="searchQuery" [(ngModel)]="searchQuery"
+                    placeholder="Tytuł, autor, EAN, wydawca lub kategoria" />
+            </label>
+
+            <div class="filter-actions">
+                <button type="submit" class="accent-button">Filtruj</button>
+                <button type="button" class="secondary-button"
+                    (click)="searchQuery = ''; applyFilters()">Wyczyść</button>
+            </div>
+        </form>
+
+        @if (error()) {
+        <app-alert tone="danger" title="Błąd pobierania" [message]="error() ?? ''" />
+        }
+
+        @if (metadataError()) {
+        <app-alert tone="warning" title="Niepełne słowniki" [message]="metadataError() ?? ''" />
+        }
+
+        @if (loading()) {
+        <div class="book-management-loading">
+            <app-spinner label="Ładowanie listy książek..." size="lg" />
+        </div>
+        } @else {
+        <div class="admin-table-shell">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Tytuł</th>
+                        <th>EAN</th>
+                        <th>Wydawca</th>
+                        <th>Autorzy</th>
+                        <th>Kategorie</th>
+                        <th>Dostępne</th>
+                        <th class="actions-column">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (book of books(); track book.id) {
+                    <tr>
+                        <td>
+                            <div class="primary-cell">{{ book.title }}</div>
+                            <div class="secondary-cell">Rok: {{ book.publish_year ?? '—' }}</div>
+                        </td>
+                        <td>{{ book.ean ?? '—' }}</td>
+                        <td>{{ book.publisher_name ?? '—' }}</td>
+                        <td>{{ getAuthorNames(book) }}</td>
+                        <td>{{ getCategoryNames(book) }}</td>
+                        <td>{{ book.available_copies }} / {{ book.copies_count }}</td>
+                        <td class="actions-column">
+                            <div class="row-actions">
+                                <button type="button" class="secondary-button"
+                                    (click)="openEditModal(book)">Edytuj</button>
+                                <button type="button" class="delete-button"
+                                    (click)="requestDeleteBook(book)">Usuń</button>
+                            </div>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="7" class="empty-state">Brak książek spełniających aktualne kryteria.</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="totalItems()"
+            (pageChange)="setPage($event)" />
+        }
+    </section>
+
+    <app-modal [open]="saveModalOpen()" [dismissible]="!saving()"
+        [title]="isEditing() ? 'Edytuj książkę' : 'Nowa książka'"
+        description="Formularz korzysta z aktualnych autorów, wydawców i kategorii dostępnych w systemie."
+        (closed)="closeSaveModal()">
+        <form class="modal-form" (submit)="submitBookForm(); $event.preventDefault()">
+            @if (saveError()) {
+            <app-alert tone="danger" title="Nie udało się zapisać zmian" [message]="saveError() ?? ''" />
+            }
+
+            @if (metadataLoading()) {
+            <div class="book-management-loading compact-loading">
+                <app-spinner label="Ładowanie słowników formularza..." size="md" />
+            </div>
+            }
+
+            <div class="form-grid">
+                <label class="form-field form-field-wide">
+                    <span>Tytuł</span>
+                    <input type="text" name="title" [(ngModel)]="bookForm.title" />
+                </label>
+
+                <label class="form-field">
+                    <span>EAN</span>
+                    <input type="text" name="ean" [(ngModel)]="bookForm.ean" />
+                </label>
+
+                <label class="form-field">
+                    <span>Rok wydania</span>
+                    <input type="number" name="publish_year" [(ngModel)]="bookForm.publish_year" min="1" step="1" />
+                </label>
+
+                <label class="form-field form-field-wide">
+                    <span>Wydawca</span>
+                    <select name="publisher" [(ngModel)]="bookForm.publisher">
+                        <option value="">Brak wydawcy</option>
+                        @for (publisher of publishers(); track publisher.id) {
+                        <option [value]="publisher.id">{{ publisher.name }}</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="form-field form-field-wide">
+                    <span>Opis</span>
+                    <textarea name="description" [(ngModel)]="bookForm.description"></textarea>
+                </label>
+            </div>
+
+            <div class="selection-sections">
+                <section class="selection-card">
+                    <header>
+                        <h3>Autorzy</h3>
+                        <p>Możesz przypisać wielu autorów do jednej pozycji.</p>
+                    </header>
+
+                    <div class="selection-grid">
+                        @for (author of authors(); track author.id) {
+                        <label class="selection-item">
+                            <input type="checkbox" [checked]="isAuthorSelected(author.id)"
+                                (change)="toggleAuthor(author.id, $any($event.target).checked)" />
+                            <span>{{ author.first_name }} {{ author.last_name }}</span>
+                        </label>
+                        } @empty {
+                        <p class="selection-empty">Brak autorów w słowniku.</p>
+                        }
+                    </div>
+                </section>
+
+                <section class="selection-card">
+                    <header>
+                        <h3>Kategorie</h3>
+                        <p>Wybierz jedną lub więcej kategorii opisujących książkę.</p>
+                    </header>
+
+                    <div class="selection-grid">
+                        @for (category of categories(); track category.id) {
+                        <label class="selection-item">
+                            <input type="checkbox" [checked]="isCategorySelected(category.id)"
+                                (change)="toggleCategory(category.id, $any($event.target).checked)" />
+                            <span>{{ category.name }}</span>
+                        </label>
+                        } @empty {
+                        <p class="selection-empty">Brak kategorii w słowniku.</p>
+                        }
+                    </div>
+                </section>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="secondary-button" [disabled]="saving()"
+                    (click)="closeSaveModal()">Anuluj</button>
+                <button type="submit" class="accent-button" [disabled]="saving()">
+                    {{ saving() ? 'Zapisywanie...' : (isEditing() ? 'Zapisz zmiany' : 'Utwórz książkę') }}
+                </button>
+            </div>
+        </form>
+    </app-modal>
+
+    <app-modal [open]="deleteModalOpen()" [dismissible]="!deleting()" title="Usuń książkę"
+        description="Książki powiązane z wypożyczeniami, karami lub zamówieniami pozostaną zablokowane przed usunięciem."
+        (closed)="closeDeleteModal()">
+        <div class="modal-form">
+            @if (deleteError()) {
+            <app-alert tone="danger" title="Usunięcie nie powiodło się" [message]="deleteError() ?? ''" />
+            }
+
+            <p class="confirm-copy">Czy na pewno chcesz usunąć książkę: <strong>{{ getDeleteTargetName() }}</strong>?
+            </p>
+
+            <div class="modal-actions">
+                <button type="button" class="secondary-button" [disabled]="deleting()"
+                    (click)="closeDeleteModal()">Anuluj</button>
+                <button type="button" class="delete-button" [disabled]="deleting()" (click)="confirmDeleteBook()">
+                    {{ deleting() ? 'Usuwanie...' : 'Usuń książkę' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+</section>

@@ -3,12 +3,15 @@
 
     <div class="page-header">
         <div>
-            <p class="page-kicker">Czytelnicy</p>
-            <h1>Zarejestrowani użytkownicy</h1>
-            <p class="page-subtitle">Lista kont czytelników i pracowników wraz z podsumowaniem aktywności.</p>
+            <p class="page-kicker">Administracja</p>
+            <h1>Zarządzanie użytkownikami</h1>
+            <p class="page-subtitle">Administrator tworzy, edytuje i usuwa konta czytelników oraz pracowników.</p>
         </div>
 
-        <app-button label="Odśwież listę" tone="secondary" icon="↻" (pressed)="loadReaders()" />
+        <div class="user-list-actions">
+            <button type="button" class="accent-button" (click)="openCreateModal()">Nowy użytkownik</button>
+            <button type="button" class="secondary-button" (click)="loadUsers()">Odśwież listę</button>
+        </div>
     </div>
 
     <div class="user-list-summary">
@@ -18,8 +21,31 @@
     </div>
 
     <section class="panel-card p-6 space-y-5">
-        <app-input label="Szukaj użytkownika" type="search" placeholder="Imię, nazwisko, email lub rola"
-            [value]="search()" (valueChange)="setSearch($event)" />
+        <form class="admin-filters" (submit)="applyFilters(); $event.preventDefault()">
+            <label class="form-field">
+                <span>Szukaj użytkownika</span>
+                <input type="search" name="searchQuery" [(ngModel)]="searchQuery"
+                    placeholder="Imię, nazwisko, email lub rola" />
+            </label>
+
+            <label class="form-field">
+                <span>Filtr roli</span>
+                <select name="roleFilter" [(ngModel)]="roleFilter">
+                    <option value="all">Wszystkie role</option>
+                    @for (option of roleOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                    }
+                </select>
+            </label>
+
+            <div class="filter-actions">
+                <button type="submit" class="accent-button">Filtruj</button>
+                <button type="button" class="secondary-button"
+                    (click)="searchQuery = ''; roleFilter = 'all'; applyFilters()">
+                    Wyczyść
+                </button>
+            </div>
+        </form>
 
         @if (error()) {
         <app-alert tone="danger" title="Błąd pobierania" [message]="error() ?? ''" />
@@ -30,11 +56,130 @@
             <app-spinner label="Ładowanie listy użytkowników..." size="lg" />
         </div>
         } @else {
-        <app-table [columns]="columns" [rows]="tableRows()" caption="Użytkownicy biblioteki"
-            emptyLabel="Brak użytkowników spełniających aktualne kryteria." />
+        <div class="admin-table-shell">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Użytkownik</th>
+                        <th>Email</th>
+                        <th>Rola</th>
+                        <th>Urodzenie</th>
+                        <th>Wypożyczenia</th>
+                        <th>Rezerwacje</th>
+                        <th>Kary</th>
+                        <th>Utworzono</th>
+                        <th class="actions-column">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (user of users(); track user.id) {
+                    <tr>
+                        <td>
+                            <div class="primary-cell">{{ getDisplayName(user) }}</div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ getRoleLabel(user.role) }}</td>
+                        <td>{{ user.birthdate ?? '—' }}</td>
+                        <td>{{ user.loan_count ?? 0 }}</td>
+                        <td>{{ user.reservation_count ?? 0 }}</td>
+                        <td>{{ user.fine_total ?? '0.00' }}</td>
+                        <td>{{ getCreatedAtLabel(user) }}</td>
+                        <td class="actions-column">
+                            <div class="row-actions">
+                                <button type="button" class="secondary-button"
+                                    (click)="openEditModal(user)">Edytuj</button>
+                                <button type="button" class="delete-button"
+                                    (click)="requestDeleteUser(user)">Usuń</button>
+                            </div>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="9" class="empty-state">Brak użytkowników spełniających aktualne kryteria.</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
         <app-pagination [page]="currentPage()" [pageSize]="pageSize" [totalItems]="totalItems()"
             (pageChange)="setPage($event)" />
         }
     </section>
+
+    <app-modal [open]="saveModalOpen()" [dismissible]="!saving()"
+        [title]="isEditing() ? 'Edytuj użytkownika' : 'Nowy użytkownik'"
+        description="Administrator zarządza rolami i danymi kont bezpośrednio z poziomu aplikacji."
+        (closed)="closeSaveModal()">
+        <form class="modal-form" (submit)="submitUserForm(); $event.preventDefault()">
+            @if (saveError()) {
+            <app-alert tone="danger" title="Nie udało się zapisać zmian" [message]="saveError() ?? ''" />
+            }
+
+            <div class="form-grid">
+                <label class="form-field">
+                    <span>Imię</span>
+                    <input type="text" name="first_name" [(ngModel)]="userForm.first_name" />
+                </label>
+
+                <label class="form-field">
+                    <span>Nazwisko</span>
+                    <input type="text" name="last_name" [(ngModel)]="userForm.last_name" />
+                </label>
+
+                <label class="form-field form-field-wide">
+                    <span>Email</span>
+                    <input type="email" name="email" [(ngModel)]="userForm.email" />
+                </label>
+
+                <label class="form-field">
+                    <span>Data urodzenia</span>
+                    <input type="date" name="birthdate" [(ngModel)]="userForm.birthdate" />
+                </label>
+
+                <label class="form-field">
+                    <span>Rola</span>
+                    <select name="role" [(ngModel)]="userForm.role">
+                        @for (option of roleOptions; track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="form-field form-field-wide">
+                    <span>{{ isEditing() ? 'Nowe hasło (opcjonalnie)' : 'Hasło' }}</span>
+                    <input type="password" name="password" [(ngModel)]="userForm.password"
+                        [placeholder]="isEditing() ? 'Pozostaw puste, aby nie zmieniać hasła' : 'Ustaw hasło dostępu'" />
+                </label>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="secondary-button" [disabled]="saving()"
+                    (click)="closeSaveModal()">Anuluj</button>
+                <button type="submit" class="accent-button" [disabled]="saving()">
+                    {{ saving() ? 'Zapisywanie...' : (isEditing() ? 'Zapisz zmiany' : 'Utwórz użytkownika') }}
+                </button>
+            </div>
+        </form>
+    </app-modal>
+
+    <app-modal [open]="deleteModalOpen()" [dismissible]="!deleting()" title="Usuń użytkownika"
+        description="Operacja jest nieodwracalna. Konto z aktywnymi zależnościami nie zostanie usunięte."
+        (closed)="closeDeleteModal()">
+        <div class="modal-form">
+            @if (deleteError()) {
+            <app-alert tone="danger" title="Usunięcie nie powiodło się" [message]="deleteError() ?? ''" />
+            }
+
+            <p class="confirm-copy">Czy na pewno chcesz usunąć konto: <strong>{{ getDeleteTargetName() }}</strong>?</p>
+
+            <div class="modal-actions">
+                <button type="button" class="secondary-button" [disabled]="deleting()"
+                    (click)="closeDeleteModal()">Anuluj</button>
+                <button type="button" class="delete-button" [disabled]="deleting()" (click)="confirmDeleteUser()">
+                    {{ deleting() ? 'Usuwanie...' : 'Usuń użytkownika' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
 </section>

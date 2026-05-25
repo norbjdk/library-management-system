@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { staffGuard } from './core/guards/staff.guard';
@@ -90,9 +91,17 @@ export const routes: Routes = [
       },
       {
         path: 'admin/users',
-        canActivate: [staffGuard],
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./features/admin/pages/user-list/user-list').then((m) => m.UserList),
+      },
+      {
+        path: 'admin/books',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/pages/book-management/book-management').then(
+            (m) => m.BookManagement,
+          ),
       },
     ],
   },

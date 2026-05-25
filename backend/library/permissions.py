@@ -9,6 +9,13 @@ def is_staff_principal(user) -> bool:
     }
 
 
+def is_admin_principal(user) -> bool:
+    return (
+        getattr(user, "is_authenticated", False)
+        and getattr(user, "role", None) == LibraryRole.ADMIN
+    )
+
+
 class IsStaffWriteOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
@@ -16,9 +23,29 @@ class IsStaffWriteOrReadOnly(BasePermission):
         return is_staff_principal(getattr(request, "user", None))
 
 
+class IsAdminWriteOrReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return is_admin_principal(getattr(request, "user", None))
+
+
+class IsAdminWriteOrStaffReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        if request.method in SAFE_METHODS:
+            return is_staff_principal(user)
+        return is_admin_principal(user)
+
+
 class IsStaffMember(BasePermission):
     def has_permission(self, request, view):
         return is_staff_principal(getattr(request, "user", None))
+
+
+class IsAdminMember(BasePermission):
+    def has_permission(self, request, view):
+        return is_admin_principal(getattr(request, "user", None))
 
 
 class IsAuthenticatedPrincipal(BasePermission):

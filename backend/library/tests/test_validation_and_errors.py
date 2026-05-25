@@ -9,8 +9,8 @@ from .base import LibraryAPITestCase
 
 
 class ValidationAndErrorApiTests(LibraryAPITestCase):
-    def test_staff_request_with_missing_title_returns_400(self):
-        response = self.authenticated_client(self.staff).post(
+    def test_admin_request_with_missing_title_returns_400(self):
+        response = self.authenticated_client(self.admin).post(
             reverse("book-list"),
             {"publisher": self.publisher.id},
             format="json",
@@ -18,6 +18,15 @@ class ValidationAndErrorApiTests(LibraryAPITestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("title", response.data)
+
+    def test_librarian_request_for_book_create_returns_403(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("book-list"),
+            {"publisher": self.publisher.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
 
     def test_duplicate_reservation_for_same_book_and_user_is_rejected(self):
         response = self.authenticated_client(self.reader).post(

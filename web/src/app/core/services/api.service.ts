@@ -55,6 +55,18 @@ export class ApiService {
     return this.http.get<Book>(`${this.base}/catalog/books/${id}/`);
   }
 
+  createBook(data: Record<string, unknown>): Observable<Book> {
+    return this.http.post<Book>(`${this.base}/catalog/books/`, data);
+  }
+
+  updateBook(id: number, data: Record<string, unknown>): Observable<Book> {
+    return this.http.patch<Book>(`${this.base}/catalog/books/${id}/`, data);
+  }
+
+  deleteBook(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/catalog/books/${id}/`);
+  }
+
   getAuthors(params?: Record<string, string>): Observable<PaginatedResponse<Author>> {
     return this.http
       .get<PaginatedResponse<Author> | Author[]>(`${this.base}/catalog/authors/`, {
@@ -218,6 +230,18 @@ export class ApiService {
         params: this.buildParams(params),
       })
       .pipe(map((response) => this.normalizeCollection(response)));
+  }
+
+  createReader(data: Record<string, unknown>): Observable<User> {
+    return this.http.post<User>(`${this.base}/readers/`, data);
+  }
+
+  updateReader(id: number, data: Record<string, unknown>): Observable<User> {
+    return this.http.patch<User>(`${this.base}/readers/${id}/`, data);
+  }
+
+  deleteReader(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/readers/${id}/`);
   }
 
   getProfile(): Observable<UserProfile> {

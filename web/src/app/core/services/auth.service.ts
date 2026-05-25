@@ -25,6 +25,8 @@ export class AuthService {
   readonly ready = this._ready.asReadonly();
   readonly isLoggedIn = computed(() => this._user() !== null);
   readonly isStaff = computed(() => this._user()?.is_staff ?? false);
+  readonly isAdmin = computed(() => this._user()?.role === 'admin');
+  readonly isLibrarian = computed(() => this._user()?.role === 'librarian');
   readonly role = computed(() => this._user()?.role ?? null);
 
   constructor(

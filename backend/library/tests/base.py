@@ -31,6 +31,14 @@ class LibraryAPITestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.today = timezone.localdate()
+        cls.admin = LibraryUser.objects.create(
+            first_name="Adam",
+            last_name="Administrator",
+            email="admin@library.com",
+            birthdate=date(1987, 4, 11),
+            password="passwd",
+            role=LibraryRole.ADMIN,
+        )
         cls.staff = LibraryUser.objects.create(
             first_name="Marta",
             last_name="Bibliotekarz",

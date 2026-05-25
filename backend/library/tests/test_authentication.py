@@ -239,3 +239,36 @@ class AuthenticationApiTests(LibraryAPITestCase):
         self.assertEqual(
             Decimal(str(response.data["summary"]["fine_total"])), Decimal("12.50")
         )
+
+    def test_admin_can_create_user_with_selected_role(self):
+        response = self.authenticated_client(self.admin).post(
+            reverse("reader-list"),
+            {
+                "first_name": "Katarzyna",
+                "last_name": "Nowa",
+                "email": "katarzyna.nowa@library.com",
+                "birthdate": "1994-02-14",
+                "password": "passwd",
+                "role": LibraryRole.LIBRARIAN,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["role"], LibraryRole.LIBRARIAN)
+
+    def test_librarian_cannot_create_user(self):
+        response = self.authenticated_client(self.staff).post(
+            reverse("reader-list"),
+            {
+                "first_name": "Jan",
+                "last_name": "BezUprawnień",
+                "email": "jan.bezuprawnien@library.com",
+                "birthdate": "1991-01-20",
+                "password": "passwd",
+                "role": LibraryRole.READER,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)

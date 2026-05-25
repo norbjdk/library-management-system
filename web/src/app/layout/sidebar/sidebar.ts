@@ -11,7 +11,8 @@ import { AuthService } from '../../core/services/auth.service';
 export class SidebarComponent {
   allItems = [
     { label: 'Panel', path: '/admin', icon: '📊', staffOnly: true },
-    { label: 'Użytkownicy', path: '/admin/users', icon: '👥', staffOnly: true },
+    { label: 'Użytkownicy', path: '/admin/users', icon: '👥', adminOnly: true },
+    { label: 'Książki', path: '/admin/books', icon: '🛠️', adminOnly: true },
     { label: 'Katalog', path: '/catalog', icon: '📚', staffOnly: false, public: true },
     { label: 'Kategorie', path: '/categories', icon: '🗂️', staffOnly: false, public: true },
     { label: 'Wypożyczenia', path: '/loans', icon: '🔄', staffOnly: false, public: false },
@@ -24,11 +25,11 @@ export class SidebarComponent {
 
   menuItems = computed(() => {
     if (this.auth.isStaff()) {
-      return this.allItems;
+      return this.allItems.filter((item) => !item.adminOnly || this.auth.isAdmin());
     }
 
     if (this.auth.isLoggedIn()) {
-      return this.allItems.filter((item) => !item.staffOnly);
+      return this.allItems.filter((item) => !item.staffOnly && !item.adminOnly);
     }
 
     return this.allItems.filter((item) => item.public);

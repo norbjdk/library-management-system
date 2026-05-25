@@ -4,6 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Q, Sum
+from django.db.models.deletion import ProtectedError, RestrictedError
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -26,7 +27,11 @@ from library.models import (
     Reservation,
     ReservationStatus,
 )
-from library.permissions import IsStaffMember, IsStaffWriteOrReadOnly
+from library.permissions import (
+    IsAdminWriteOrReadOnly,
+    IsAdminWriteOrStaffReadOnly,
+    IsStaffMember,
+)
 from library.serializers import (
     AuthorSerializer,
     BookSerializer,
@@ -145,7 +150,7 @@ class ApiRootView(APIView):
 
 
 class BaseCatalogViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsStaffWriteOrReadOnly]
+    permission_classes = [IsAdminWriteOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
 
     def get_queryset(self):
@@ -205,6 +210,18 @@ class BookViewSet(BaseCatalogViewSet):
     def availability(self, request, pk=None):
         book = self.get_object()
         return Response(build_book_availability_snapshot(book))
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except (ProtectedError, RestrictedError) as error:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Nie można usunąć książki, która jest powiązana z istniejącymi wypożyczeniami, karami lub zamówieniami."
+                    )
+                }
+            ) from error
 
 
 class AuthorViewSet(BaseCatalogViewSet):
@@ -308,7 +325,7 @@ class CopyViewSet(BaseCatalogViewSet):
 class ReaderViewSet(viewsets.ModelViewSet):
     queryset = LibraryUser.objects.all()
     serializer_class = ReaderSerializer
-    permission_classes = [IsStaffMember]
+    permission_classes = [IsAdminWriteOrStaffReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["first_name", "last_name", "email", "role"]
     ordering_fields = ["first_name", "last_name", "email", "role", "id"]
@@ -326,6 +343,18 @@ class ReaderViewSet(viewsets.ModelViewSet):
         if role:
             queryset = queryset.filter(role=role)
         return queryset
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except (ProtectedError, RestrictedError) as error:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Nie można usunąć użytkownika, który ma powiązane wypożyczenia lub kary."
+                    )
+                }
+            ) from error
 
 
 class LoanViewSet(viewsets.ModelViewSet):
