@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { BookDetail } from './book-detail';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('BookDetail', () => {
   let component: BookDetail;
@@ -24,12 +25,14 @@ describe('BookDetail', () => {
       'getBook',
       'getBookAvailability',
       'getCopies',
+      'getReservations',
       'createReservation',
     ]);
 
     await TestBed.configureTestingModule({
       imports: [BookDetail],
       providers: [
+        ...commonTestProviders,
         { provide: ApiService, useValue: api },
         {
           provide: AuthService,
@@ -104,6 +107,7 @@ describe('BookDetail', () => {
         ],
       }),
     );
+    api.getReservations.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
 
     fixture = TestBed.createComponent(BookDetail);
     component = fixture.componentInstance;
@@ -254,6 +258,7 @@ describe('BookDetail', () => {
         ],
       }),
     );
+    api.getReservations.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
 
     fixture = TestBed.createComponent(BookDetail);
     component = fixture.componentInstance;
@@ -278,6 +283,7 @@ describe('BookDetail', () => {
       }),
     );
     api.getCopies.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
+    api.getReservations.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
 
     fixture = TestBed.createComponent(BookDetail);
     component = fixture.componentInstance;

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Queue } from './queue';
+import { commonTestProviders } from '../../testing/test-providers';
 
 describe('Queue', () => {
   let component: Queue;
@@ -8,9 +9,9 @@ describe('Queue', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Queue]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Queue],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Queue);
     component = fixture.componentInstance;

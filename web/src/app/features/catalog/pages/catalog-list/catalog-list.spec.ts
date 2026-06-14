@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../core/services/api.service';
 import { CatalogList } from './catalog-list';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('CatalogList', () => {
   let component: CatalogList;
@@ -13,7 +14,7 @@ describe('CatalogList', () => {
 
     await TestBed.configureTestingModule({
       imports: [CatalogList],
-      providers: [{ provide: ApiService, useValue: api }],
+      providers: [...commonTestProviders, { provide: ApiService, useValue: api }],
     }).compileComponents();
   });
 
@@ -30,7 +31,7 @@ describe('CatalogList', () => {
     component.searchQuery = '  Solaris   Lem ';
     component.onSearch();
 
-    expect(api.getBooks.calls.mostRecent().args[0]).toEqual({ q: 'Solaris Lem' });
+    expect(api.getBooks.calls.mostRecent().args[0]).toEqual({ q: 'Solaris Lem', page: '1' });
   });
 
   it('omits blank search text after sanitization', () => {
@@ -40,7 +41,7 @@ describe('CatalogList', () => {
     component.searchQuery = '    ';
     component.onSearch();
 
-    expect(api.getBooks.calls.mostRecent().args[0]).toEqual({});
+    expect(api.getBooks.calls.mostRecent().args[0]).toEqual({ page: '1' });
   });
 
   it('shows an error message when loading the catalog fails', () => {

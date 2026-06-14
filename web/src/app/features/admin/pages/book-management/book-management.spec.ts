@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { BookManagement } from './book-management';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('BookManagement', () => {
   let component: BookManagement;
@@ -8,6 +9,7 @@ describe('BookManagement', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [...commonTestProviders],
       imports: [BookManagement],
     }).compileComponents();
 

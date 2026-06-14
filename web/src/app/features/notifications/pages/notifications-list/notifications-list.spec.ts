@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../core/services/api.service';
 import { NotificationsList } from './notifications-list';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('NotificationsList', () => {
   let component: NotificationsList;
@@ -59,7 +60,7 @@ describe('NotificationsList', () => {
 
     await TestBed.configureTestingModule({
       imports: [NotificationsList],
-      providers: [{ provide: ApiService, useValue: api }],
+      providers: [...commonTestProviders, { provide: ApiService, useValue: api }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(NotificationsList);

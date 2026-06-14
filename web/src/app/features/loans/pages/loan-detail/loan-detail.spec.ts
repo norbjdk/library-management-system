@@ -5,12 +5,13 @@ import { Loan } from '../../../../core/models/loan';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LoanDetail } from './loan-detail';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('LoanDetail', () => {
   let component: LoanDetail;
   let fixture: ComponentFixture<LoanDetail>;
   let api: jasmine.SpyObj<ApiService>;
-  let auth: { isStaff: jasmine.Spy };
+  let auth: { isStaff: jasmine.Spy; user: jasmine.Spy };
 
   const activeLoan: Loan = {
     id: 200,
@@ -30,11 +31,15 @@ describe('LoanDetail', () => {
 
   beforeEach(async () => {
     api = jasmine.createSpyObj<ApiService>('ApiService', ['getLoan', 'returnLoan', 'extendLoan']);
-    auth = { isStaff: jasmine.createSpy().and.returnValue(true) };
+    auth = {
+      isStaff: jasmine.createSpy().and.returnValue(true),
+      user: jasmine.createSpy().and.returnValue({ id: 1, is_staff: true, role: 'librarian' }),
+    };
 
     await TestBed.configureTestingModule({
       imports: [LoanDetail],
       providers: [
+        ...commonTestProviders,
         { provide: ApiService, useValue: api },
         { provide: AuthService, useValue: auth },
         {
@@ -72,7 +77,7 @@ describe('LoanDetail', () => {
     expect(api.extendLoan).toHaveBeenCalledWith(200, 7);
     expect(component.loan()?.due_date).toBe('2026-05-17');
     expect(fixture.nativeElement.textContent).toContain(
-      'Termin zwrotu został przedłużony o 7 dni.',
+      'Termin zwrotu został przedłużony o kolejny tydzień.',
     );
   });
 
@@ -88,11 +93,14 @@ describe('LoanDetail', () => {
     expect(fixture.nativeElement.textContent).toContain('Nie można przedłużyć wypożyczenia.');
   });
 
-  it('shows a read-only notice for readers', () => {
+  it('shows the reader self-service notice for readers', () => {
     auth.isStaff.and.returnValue(false);
+    auth.user.and.returnValue({ id: 2, is_staff: false, role: 'reader' });
     createComponent();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Tryb tylko do odczytu');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Czytelnik może sam przedłużyć termin o kolejny tydzień',
+    );
   });
 });

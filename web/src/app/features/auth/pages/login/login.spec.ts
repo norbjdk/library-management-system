@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AuthResponse } from '../../../../core/models/user';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Login } from './login';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('Login', () => {
   let component: Login;
@@ -32,6 +33,7 @@ describe('Login', () => {
     await TestBed.configureTestingModule({
       imports: [Login],
       providers: [
+        ...commonTestProviders,
         { provide: AuthService, useValue: auth },
         { provide: Router, useValue: router },
         {

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Catalog } from './catalog';
+import { commonTestProviders } from '../../testing/test-providers';
 
 describe('Catalog', () => {
   let component: Catalog;
@@ -8,9 +9,9 @@ describe('Catalog', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Catalog]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Catalog],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Catalog);
     component = fixture.componentInstance;

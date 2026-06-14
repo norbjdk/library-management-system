@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Spinner } from './spinner';
+import { commonTestProviders } from '../../../testing/test-providers';
 
 describe('Spinner', () => {
   let component: Spinner;
@@ -8,9 +9,9 @@ describe('Spinner', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Spinner]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Spinner],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Spinner);
     component = fixture.componentInstance;

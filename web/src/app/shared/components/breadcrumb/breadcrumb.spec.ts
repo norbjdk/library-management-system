@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Breadcrumb } from './breadcrumb';
+import { commonTestProviders } from '../../../testing/test-providers';
 
 describe('Breadcrumb', () => {
   let component: Breadcrumb;
@@ -8,9 +9,9 @@ describe('Breadcrumb', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Breadcrumb]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Breadcrumb],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Breadcrumb);
     component = fixture.componentInstance;

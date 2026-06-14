@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { LoanList } from './loan-list';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('LoanList', () => {
   let component: LoanList;
@@ -8,9 +9,9 @@ describe('LoanList', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LoanList]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [LoanList],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(LoanList);
     component = fixture.componentInstance;

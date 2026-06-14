@@ -4,6 +4,7 @@ import { UserProfile } from '../../../../core/models/user';
 import { ApiService } from '../../../../core/services/api.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { UserProfileComponent } from './user-profile';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('UserProfileComponent', () => {
   let component: UserProfileComponent;
@@ -39,6 +40,7 @@ describe('UserProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [UserProfileComponent],
       providers: [
+        ...commonTestProviders,
         { provide: ApiService, useValue: api },
         { provide: AuthService, useValue: auth },
       ],

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Dashboard } from './dashboard';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('Dashboard', () => {
   let component: Dashboard;
@@ -8,9 +9,9 @@ describe('Dashboard', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Dashboard]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Dashboard],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Dashboard);
     component = fixture.componentInstance;

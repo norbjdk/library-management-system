@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../core/services/api.service';
 import { OrderList } from './order-list';
+import { commonTestProviders } from '../../../../testing/test-providers';
 
 describe('OrderList', () => {
   let component: OrderList;
@@ -21,7 +22,7 @@ describe('OrderList', () => {
 
     await TestBed.configureTestingModule({
       imports: [OrderList],
-      providers: [{ provide: ApiService, useValue: api }],
+      providers: [...commonTestProviders, { provide: ApiService, useValue: api }],
     }).compileComponents();
   });
 

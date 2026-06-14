@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Modal } from './modal';
+import { commonTestProviders } from '../../../testing/test-providers';
 
 describe('Modal', () => {
   let component: Modal;
@@ -8,9 +9,9 @@ describe('Modal', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Modal]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Modal],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Modal);
     component = fixture.componentInstance;

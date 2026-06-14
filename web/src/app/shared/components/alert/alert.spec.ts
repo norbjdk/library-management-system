@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Alert } from './alert';
+import { commonTestProviders } from '../../../testing/test-providers';
 
 describe('Alert', () => {
   let component: Alert;
@@ -8,9 +9,9 @@ describe('Alert', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Alert]
-    })
-    .compileComponents();
+      providers: [...commonTestProviders],
+      imports: [Alert],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Alert);
     component = fixture.componentInstance;
