@@ -1,25 +1,27 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-export function normalizeText(value: string): string {
-  return value.trim().replace(/\s+/g, ' ');
+export function normalizeText(value: unknown): string {
+  if (value == null) return '';
+  return String(value).trim().replace(/\s+/g, ' ');
 }
 
-export function normalizeEmail(value: string): string {
+export function normalizeEmail(value: unknown): string {
   return normalizeText(value).toLowerCase();
 }
 
-export function hasText(value: string): boolean {
+export function hasText(value: unknown): boolean {
   return normalizeText(value).length > 0;
 }
 
-export function isValidEmail(value: string): boolean {
+export function isValidEmail(value: unknown): boolean {
   const normalizedValue = normalizeEmail(value);
   return normalizedValue.length > 0 && EMAIL_REGEX.test(normalizedValue);
 }
 
-export function normalizeDateInput(value: string): string {
-  return value.trim();
+export function normalizeDateInput(value: unknown): string {
+  if (value == null) return '';
+  return String(value).trim();
 }
 
 export function isValidIsoDate(value: string): boolean {
